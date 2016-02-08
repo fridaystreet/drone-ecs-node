@@ -355,7 +355,7 @@ plugin.parse().then((params) => {
 
         task.serviceArn = taskArns[task.taskArn].service
 
-        taskDefinitionArns[task.taskDefinitionArn][task.taskArn] = task;
+        taskDefinitionArns[task.taskDefinitionArn] = task;
 
         var params = {
           taskDefinition: task.taskDefinitionArn
@@ -395,74 +395,123 @@ plugin.parse().then((params) => {
       for (var i=0; i<taskDefinitions.length; i++) {
 
         var taskDef = taskDefinitions[i];
-        var revision = taskDef.revision++;
 
         //replace image in each container
+        //need to handle multiple containers
+        //which ones updated.
+        //need to have the container passed in the vargs 
         for (var x=0; x<taskDef.containerDefinitions; x++) {
-          taskDef.containerDefinitions[x].image = vargs.Image + ":" + vargs.Tag
+          var name = taskDef.containerDefinitions[x].name;
+          if (name.toLowerCase() == vargs.ContainerName.toLowerCase()) {
+            taskDef.containerDefinitions[x].image = vargs.Image + ":" + vargs.Tag
+          }
         }
 
         //need to do some magic here that will merge the updated
         //config if any.
+        /*
+        todo
+         */
 
+        //remove fields that aren't required for new definition
         delete taskDef.taskDefinitionArn;
         delete taskDef.revision;
         delete taskDef.status;
 
-        var tasks = taskDefinitionArns[taskDef];
+        var task = taskDefinitionArns[taskDef];
 
+        var service = serviceDescriptions[task.service];
 
-        for (taskArn in tasks) {
+        var params = {
+          service: task.service,
+          cluster: task.cluster,
+          deploymentConfiguration: {
+            maximumPercent: 200,
+            minimumPercent: 0
+          },
+          desiredCount: service.desiredCount,
+          taskDefinition: taskDefinition
+        };
+        
+        promises.push(ecs.registerTaskDefinition(params, function (err, data) {
+            if (err) {
+              console.log(err, err.stack); // an error occurred
+              return process.exit(1);
+            } else {
+              console.log(data);           // successful response
+              //need to furnish the results with the taskArn
+              
+              data = {
+                taskArn: taskDefinitionArns[taskDef].taskArn,
+                taskDefinition: data.taskDefinition
+              };
 
-          var task = tasks[taskArn];
-          var service = serviceDescriptions[task.service];
+              return defer.resolve(data);
+            }
+          })
+        );         
+      }
 
-          var params = {
-            service: task.service,
-            cluster: task.cluster,
-            deploymentConfiguration: {
-              maximumPercent: 200,
-              minimumPercent: 0
-            },
-            desiredCount: service.desiredCount,
-            taskDefinition: taskDefinition
+      return Q.all(promises).done(function (values) {
+
+        var taskDefs = [];
+        for (var i=0; i<values.length; i++) {
+
+          var taskDef = values[i].taskDefinition;
+          if (taskDef.status == 'ACTIVE') {
+            //update the service with the new task def
+            taskDefs.push(taskDef);
           }
+
         }
-
-      }
-
-    })
+        return taskDefs;
+      });
 
     })
-    ;
-  }
-    var params = {
-      familyPrefix: vargs.Family,
-      maxResults: 0,
-      nextToken: 'STRING_VALUE'
-    };
+  .then(function (taskDefs) {
 
-    defer = Q.defer();
+    //update the service of each task def.
+    //get the existing task from the values in case we need to stop it
 
-    ecs.listTaskDefinitionFamilies(params, function(err, data) {
-      if (err) {
-        console.log(err, err.stack); // an error occurred
-        process.exit(1);
-      } else {
-        console.log(data);           // successful response
-        return defer.resolve(data);
+    if (taskDefs.length <= 0) {
+      console.log("no task definitions have been created");
+
+      return process.exit(1);
+    }
+
+    var promises = [];
+    for (var i=0; i<taskDefs.length; i++) {
+
+      var taskDef = taskDefs[i];
+
+      var task = taskDefinitionArns[taskDef.taskArn];
+
+      var params = {
+        service: task.service,
+        cluster: task.cluster,
+        deploymentConfiguration: {
+          maximumPercent: 200,
+          minimumPercent: 0
+        },
+        desiredCount: service.desiredCount,
+        taskDefinition: taskDef.taskDefinition
+      };
+
+      promises.push(ecs.updateService(params, awsCallback));
+    }
+
+    return Q.all(promises).done(function (values) {
+
+      for (var i=0; i<values.length; i++) {
+        console.log(values[i].service.serviceName + "updated");
       }
+      return values;
     });
-
-    return defer.promise;
-  }
-
-
-
-})
-.then(function (result) {
-
-
+  })
+  .then(function (data) {
+    console.log('everything worked');
+    return process.exit(0);
+  });
 });
 
 function awsCallback (err, data) {
