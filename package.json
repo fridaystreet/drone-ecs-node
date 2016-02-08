@@ -1,0 +1,23 @@
+{
+  "name": "drone-ecs-node",
+  "version": "0.1.0",
+  "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fridaystreet/drone-ecs-node.git"
+  },
+  "author": "Paul Trappitt",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/fridaystreet/drone-ecs-node/issues"
+  },
+  "homepage": "https://github.com/fridaystreet/drone-ecs-node#readme",
+  "dependencies": {
+    "aws-sdk": "^2.2.33"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node app.js",
+    "debug": "node debug app.js"
+  }
+}
