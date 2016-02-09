@@ -156,7 +156,15 @@ function processBuild(params) {
     //should still retreive the existing config
     //and merge it here, but no need for searching the 
     //all clusters etc. Can retrieve task defs using family name
-
+    /*
+    what's actually happening here?
+    all the specified names are hard
+    so should be bale to just do the last 2 steps
+    of regdefinitions and update service.
+    might need a way to set the services / clusters / tasks 
+    also need to pull down the existing definition so we can merge the 
+    new config
+     */
   }
 }
 
