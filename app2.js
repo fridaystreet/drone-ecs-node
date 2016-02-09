@@ -35,43 +35,43 @@ function processBuild(params) {
   const vargs = params.vargs;
 
   if (vargs.AccessKey.length == 0) {
-    console.log("Please provide an access key");
+    logger.error("Please provide an access key");
 
     return process.exit(1);
   }
 
   if (vargs.SecretKey.length == 0) {
-    fconsole.log("Please provide a secret key");
+    logger.error("Please provide a secret key");
 
     return process.exit(1);
   }
 
   if (vargs.Region.length == 0) {
-    console.log("Please provide a region");
+    logger.error("Please provide a region");
 
     return process.exit(1);
   }
 
   if (vargs.Family.length == 0) {
-    console.log("Please provide a task definition family name");
+    logger.error("Please provide a task definition family name");
 
     return process.exit(1);
   }
 
   if (vargs.Cluster.length == 0) {
-    console.log("Please provide a cluster name");
+    logger.error("Please provide a cluster name");
 
     return process.exit(1);
   }
 
   if (vargs.Image.length == 0) {
-    console.log("Please provide an image name");
+    logger.error("Please provide an image name");
 
     return process.exit(1);
   }
 
   if (vargs.Service.length == 0) {
-    console.log("Please provide a service name");
+    logger.error("Please provide a service name");
 
     return process.exit(1);
   }
@@ -106,51 +106,57 @@ function processBuild(params) {
   if (vargs.CloudFormation) {
 
     return ecs.listClusters()
-    .then(function (data) {
+    .then(function (clusterArns) {
 
-      ecs.processClusters(data);
+      ecs.processClusters(clusterArns);
       return ecs.listServices();
     })
-    .then(function (data) {
+    .then(function (serviceArns) {
 
-      ecs.processServicesList(data);
+      ecs.processServicesList(serviceArns);
       return ecs.describeServices();
     })
-    .then(function (data) {
+    .then(function (serviceDescriptions) {
 
-      ecs.processServiceDescriptions(data);
+      ecs.processServiceDescriptions(serviceDescriptions);
       return ecs.listTasks();
     })
-    .then(function (data) {
+    .then(function (taskArns) {
 
-      ecs.processTasksList(data);
+      ecs.processTasksList(taskArns);
       return ecs.describeTasks();
     })
-    .then(function (data) {
+    .then(function (taskDescriptions) {
 
-      ecs.processTaskDescriptions(data);
+      ecs.processTaskDescriptions(taskDescriptions);
       return ecs.describeTaskDefinitions();
     })
-    .then(function (data) {
+    .then(function (taskDefinitions) {
 
-      return ecs.registerTaskDefinitions(data);
+      return ecs.registerTaskDefinitions(taskDefinitions);
     })
-    .then(function (data) {
+    .then(function (taskDefinitions) {
 
-      return ecs.updateServices(data);
+      return ecs.updateServices(taskDefinitions);
     })
-    .then(function (data) {
+    .then(function (services) {
 
-      console.log('final data', data);
-      console.log('everything worked');
+      logger.info('final data', services);
+      logger.info('everything worked');
       return process.exit(0);
 
     })
     .catch(function (err) {
 
-      console.log('catch', err, err.stack);
+      logger.fatal('catch', err, err.stack);
       return process.exit(1);
     });
+  } else {
+    //process the normal setup.
+    //should still retreive the existing config
+    //and merge it here, but no need for searching the 
+    //all clusters etc. Can retrieve task defs using family name
+
   }
 }
 
