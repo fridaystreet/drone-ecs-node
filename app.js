@@ -399,7 +399,7 @@ plugin.parse().then((params) => {
         //replace image in each container
         //need to handle multiple containers
         //which ones updated.
-        //need to have the container passed in the vargs 
+        //need to have the container passed in the vargs
         for (var x=0; x<taskDef.containerDefinitions; x++) {
           var name = taskDef.containerDefinitions[x].name;
           if (name.toLowerCase() == vargs.ContainerName.toLowerCase()) {
@@ -432,7 +432,7 @@ plugin.parse().then((params) => {
           desiredCount: service.desiredCount,
           taskDefinition: taskDefinition
         };
-        
+
         promises.push(ecs.registerTaskDefinition(params, function (err, data) {
             if (err) {
               console.log(err, err.stack); // an error occurred
@@ -440,7 +440,7 @@ plugin.parse().then((params) => {
             } else {
               console.log(data);           // successful response
               //need to furnish the results with the taskArn
-              
+
               data = {
                 taskArn: taskDefinitionArns[taskDef].taskArn,
                 taskDefinition: data.taskDefinition
@@ -449,10 +449,10 @@ plugin.parse().then((params) => {
               return defer.resolve(data);
             }
           })
-        );         
+        );
       }
 
-      return Q.all(promises).done(function (values) {
+      return Q.all(promises).then(function (values) {
 
         var taskDefs = [];
         for (var i=0; i<values.length; i++) {
