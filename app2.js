@@ -133,23 +133,26 @@ function processBuild(params) {
     })
     .then(function (data) {
 
-      return createTaskDefinitions(data);
+      return ecs.registerTaskDefinitions(data);
     })
     .then(function (data) {
 
+      return ecs.updateServices(data);
+    })
+    .then(function (data) {
+
+      console.log('final data', data);
       console.log('everything worked');
       return process.exit(0);
+
     })
     .catch(function (err) {
 
-      console.log(err);
+      console.log('catch', err, err.stack);
       return process.exit(1);
     });
   }
 }
-
-
-
 
 
 function ecsService (options, vargs) {
@@ -173,7 +176,7 @@ ecsService.prototype = Object.create({
 
   listClusters: function() {
 
-    logger.('Fetching services from ECS');
+    logger.info('Fetching services from ECS');
 
     var _this = this;
     //1. list clusters
@@ -184,9 +187,7 @@ ecsService.prototype = Object.create({
         if (err) {
           throw new Error(err); // an error occurred
         } else {
-            if (_this.vargs.debug) {
-              this.log(['listClusters response', data], 5);
-            }
+            logger.debug(['listClusters response', data], 5);
             return resolve(data);
         }
       });
@@ -239,9 +240,7 @@ ecsService.prototype = Object.create({
         maxResults: 100,
       };
 
-      if (this.vargs.debug) {
-        console.log('listServices Request Parameters', params);
-      }
+      logger.debug('listServices Request Parameters', params);
 
       var promise = new Promise(function (resolve) {
           _this.ecs.listServices(params, function (err, data) {
@@ -249,9 +248,7 @@ ecsService.prototype = Object.create({
               throw new Error(err);
             }
             data.clusterArn = clusterArn;
-            if (_this.vargs.debug) {
-              console.log('listServices callback response for cluster: ' + clusterArn, data);
-            }
+            logger.debug('listServices callback response for cluster: ' + clusterArn, data);
             return resolve(data);
           });
         });
@@ -315,9 +312,7 @@ ecsService.prototype = Object.create({
       throw new Error('No serviceArns set, run listServices or setServiceArns');
     }
 
-    if (this.vargs.debug) {
-      console.log('describeServices this.serviceArns', this.serviceArns);
-    }
+    logger.debug('describeServices this.serviceArns', this.serviceArns);
 
     var _this = this;
     var promises = [];
@@ -327,17 +322,16 @@ ecsService.prototype = Object.create({
         cluster: clusterArn
       };
 
-      if (this.vargs.debug) {
-        console.log('describeServices request parameters', params);
-      }
+      logger.debug('describeServices request parameters', params);
+
       var promise = new Promise(function (resolve) {
         _this.ecs.describeServices(params, function (err, data) {
           if (err) {
             throw new Error(err);
           }
-          if (_this.vargs.debug) {
-            console.log('describeServices callback response for cluster: ' + clusterArn, data);
-          }
+
+          logger.debug('describeServices callback response for cluster: ' + clusterArn, data);
+
           return resolve(data);
         });
       });
@@ -395,9 +389,7 @@ ecsService.prototype = Object.create({
           if (err) {
             throw new Error(err); // an error occurred
           } else {
-            if (_this.vargs.debug) {
-              console.log('listTasks callback response for service: ' + service.serviceArn, data);           // successful response
-            }
+            logger.debug('listTasks callback response for service: ' + service.serviceArn, data);           // successful response
             //inject the cluster and service
             //in to the response so that
             //we know which task belong to where
@@ -439,7 +431,6 @@ ecsService.prototype = Object.create({
       throw new Error("No tasks found");
     }
 
-    console.log('clusterArns', this.clusterArns);
     for (var i=0; i<data.length; i++) {
 
       var serviceArn = data[i].serviceArn;
@@ -471,7 +462,6 @@ ecsService.prototype = Object.create({
       throw new Error('No clusters set');
     }
 
-    console.log('clusterArns', this.clusterArns);
     var _this = this;
     var promises = [];
 
@@ -485,9 +475,7 @@ ecsService.prototype = Object.create({
         cluster: clusterArn
       };
 
-      if (this.vargs.debug){
-        console.log('describeTasks for cluster: ' + clusterArn + ' request parameters', params);
-      }
+      logger.debug('describeTasks for cluster: ' + clusterArn + ' request parameters', params);
 
       var promise = new Promise(function (resolve) {
         _this.ecs.describeTasks(params, function (err, data) {
@@ -495,9 +483,8 @@ ecsService.prototype = Object.create({
           if (err) {
             throw new Error(err); // an error occurred
           } else {
-            if (_this.vargs.debug) {
-              console.log('describeTasks callback response for cluster: ' + clusterArn, data);           // successful response
-            }
+
+            logger.debug('describeTasks callback response for cluster: ' + clusterArn, data);           // successful response
             return resolve(data);
           }
         });
@@ -560,9 +547,7 @@ ecsService.prototype = Object.create({
           if (err) {
             throw new Error(err); // an error occurred
           } else {
-            if (_this.vargs.debug) {
-              console.log('describeTaskDefinitionss callback response for task def: ' + taskDefArn, data);           // successful response
-            }
+            logger.debug('describeTaskDefinitionss callback response for task def: ' + taskDefArn, data);           // successful response
             return resolve(data);
           }
         });
@@ -645,9 +630,7 @@ ecsService.prototype = Object.create({
           if (err) {
             throw new Error(err); // an error occurred
           } else {
-            if (_this.vargs.debug) {
-              console.log('registerTaskDefinitions callback response for service: ' + serviceArn, data);           // successful response
-            }
+            logger.debug('registerTaskDefinitions callback response for service: ' + serviceArn, data);           // successful response
             //need to furnish the results with the taskArn
 
             data = {
@@ -702,17 +685,14 @@ ecsService.prototype = Object.create({
         taskDefinition: taskDef.taskDefinition.taskDefinitionArn
       };
 
-      if (this.vargs.debug) {
-        console.log('updateService request parameters', params);
-      }
+      logger.debug('updateService request parameters', params);
+
       var promise = new Promise(function (resolve) {
         _this.ecs.updateService(params, function (err, data) {
          if (err) {
             throw new Error(err); // an error occurred
           } else {
-            if (_this.vargs.debug) {
-              console.log('updateService callback response for service: ' + taskDef.serviceArn + ' task def: ' + taskDefArn, data);           // successful response
-            }
+            logger.debug('updateService callback response for service: ' + taskDef.serviceArn + ' task def: ' + taskDefArn, data);           // successful response
             return resolve(data);
           }
         });
@@ -723,7 +703,7 @@ ecsService.prototype = Object.create({
     return Promise.all(promises).then(function (values) {
 
       for (var i=0; i<values.length; i++) {
-        console.log(values[i].service.serviceName + "updated");
+        logger.info(values[i].service.serviceName + "updated");
       }
       return values;
     });
@@ -748,9 +728,25 @@ var vargs = {
   Image_name: 'registry.engagementcoach.com.au/frontend-production',
   Tag: '8',
   CloudFormation: true,
-  debug: true
+  LogLevel: 'debug'
 }
 
+  var logLevels = [
+    'info',
+    'fatal',
+    'error',
+    'warn',
+    'debug',
+    'trace'
+  ];
+
+  var logLevel = 'info';
+
+  if (logLevels.indexOf(vargs.LogLevel) != -1) {
+    logLevel = vargs.LogLevel;
+  }
+
+  logger.level(logLevel);
 
 var awsOptions = {
   accessKeyId:      vargs.AccessKey,
@@ -796,14 +792,14 @@ var ecs = new ecsService(awsOptions, vargs);
     })
     .then(function (data) {
 
-      console.log('final data', data);
-      console.log('everything worked');
+      logger.info('final data', data);
+      logger.info('everything worked');
       return process.exit(0);
 
     })
     .catch(function (err) {
 
-      console.log('catch', err, err.stack);
+      logger.error('catch', err, err.stack);
       return process.exit(1);
     });
 
