@@ -2,7 +2,6 @@
 //const plugin = new Drone.Plugin();
 const AWS = require('aws-sdk');
 const Promise = require('bluebird');
-const Q = require('q');
 const bunyan = require('bunyan');
 const logger = bunyan.createLogger({name: 'drone-ecs-node'});
 
