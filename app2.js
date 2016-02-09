@@ -201,7 +201,8 @@ ecsService.prototype = Object.create({
         if (err) {
           throw new Error(err); // an error occurred
         } else {
-            logger.debug(['listClusters response', data], 5);
+            logger.debug('listClusters response');
+            logger.debug(data);
             return resolve(data);
         }
       });
@@ -262,7 +263,8 @@ ecsService.prototype = Object.create({
               throw new Error(err);
             }
             data.clusterArn = clusterArn;
-            logger.debug('listServices callback response for cluster: ' + clusterArn, data);
+            logger.debug('listServices callback response for cluster: ' + clusterArn);
+            logger.debug(data);
             return resolve(data);
           });
         });
@@ -326,7 +328,8 @@ ecsService.prototype = Object.create({
       throw new Error('No serviceArns set, run listServices or setServiceArns');
     }
 
-    logger.debug('describeServices this.serviceArns', this.serviceArns);
+    logger.debug('describeServices this.serviceArns');
+    logger.debug(this.serviceArns);
 
     var _this = this;
     var promises = [];
@@ -344,7 +347,8 @@ ecsService.prototype = Object.create({
             throw new Error(err);
           }
 
-          logger.debug('describeServices callback response for cluster: ' + clusterArn, data);
+          logger.debug('describeServices callback response for cluster: ' + clusterArn);
+          logger.debug(data);
 
           return resolve(data);
         });
@@ -631,7 +635,10 @@ ecsService.prototype = Object.create({
       /*
       todo
        */
-
+      if (Object.keys(vargs.taskDefinition).length == 0) {
+        vargs.taskDefinition = {};
+      }
+      taskDef = this.mergeRecursive(taskDef, vargs.taskDefinition);
 
       //remove fields that aren't required for new definition
       delete taskDef.taskDefinitionArn;
@@ -721,7 +728,30 @@ ecsService.prototype = Object.create({
       }
       return values;
     });
-  }
+  },
+
+  mergeRecursive: function (obj1, obj2) {
+
+    for (var p in obj2) {
+      try {
+        // Property in destination object set; update its value.
+        if ( obj2[p].constructor==Object ) {
+          obj1[p] = MergeRecursive(obj1[p], obj2[p]);
+
+        } else {
+          obj1[p] = obj2[p];
+
+        }
+
+      } catch(e) {
+        // Property in destination object not set; create it and set its value.
+        obj1[p] = obj2[p];
+
+      }
+    }
+
+    return obj1;
+  }  
 
 });
 
