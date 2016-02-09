@@ -165,6 +165,7 @@ function processBuild(params) {
     also need to pull down the existing definition so we can merge the 
     new config
      */
+    
   }
 }
 
@@ -186,7 +187,6 @@ ecsService.prototype = Object.create({
   serviceDescriptions: {},
   taskDescriptions: {},
   taskDefinitions: {},
-  defer: null,
 
   listClusters: function() {
 
@@ -745,22 +745,22 @@ var vargs = {
   LogLevel: 'debug'
 }
 
-  var logLevels = [
-    'info',
-    'fatal',
-    'error',
-    'warn',
-    'debug',
-    'trace'
-  ];
+var logLevels = [
+  'info',
+  'fatal',
+  'error',
+  'warn',
+  'debug',
+  'trace'
+];
 
-  var logLevel = 'info';
+var logLevel = 'info';
 
-  if (logLevels.indexOf(vargs.LogLevel) != -1) {
-    logLevel = vargs.LogLevel;
-  }
+if (logLevels.indexOf(vargs.LogLevel) != -1) {
+  logLevel = vargs.LogLevel;
+}
 
-  logger.level(logLevel);
+logger.level(logLevel);
 
 var awsOptions = {
   accessKeyId:      vargs.AccessKey,
