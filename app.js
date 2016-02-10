@@ -471,7 +471,7 @@ ecsService.prototype = Object.create({
       if (Object.keys(vargs.TaskDefinition).length > 0) {
         logger.debug('before', util.inspect(taskDef, { showHidden: true, depth: null }));
 
-        taskDef = this.mergeRecursive(taskDef, vargs.TaskDefinition);
+        taskDef = this.mergeObjects(taskDef, vargs.TaskDefinition);
 
         logger.debug('after', util.inspect(taskDef, { showHidden: true, depth: null }));
       }
@@ -568,50 +568,126 @@ ecsService.prototype = Object.create({
     });
   },
 
-  mergeRecursive: function (obj1, obj2) {
+  mergeObjectArray: function (target, source) {
 
-    for (var p in obj2) {
-      if (p in obj1) {
 
-        // Property in destination object set; update its value.
-        if (Object.prototype.toString.call(obj2[p]) == '[object Array]') {
+    var objKeys = Object.keys(source[0]);
 
-          obj1[p] = this.mergeArrays(obj1[p], obj2[p]);
+    //walk through objects in the array
+    for (var i=0; i<source.length; i++) {
 
-        } else if (Object.prototype.toString.call(obj2[p]) == '[object Object]') {
+      var newObj = source[i];
 
-          obj1[p] = MergeRecursive(obj1[p], obj2[p]);
+      //check if any keys have been defined
+      //to match the object
+      if (!('keys' in newObj)) {
+        //no keys so it must be a new item
+        //add it to the array
+        target.push(newObj);
+        continue;
+      }
 
-        } else {
+        //otherwise cycle through all the other objects
+        //in the array and to find an object that matches the keys
+      for (var y=0; y<target.length; y++) {
+        var oldObj = target[y];
 
-          obj1[p] = obj2[p];
+        var matched = 0;
+        for (var a=0; a<newObj.keys.length; a++) {
+          var key = newObj.keys[a];
+          if (!(key in oldObj) || oldObj[key] != newObj[key]) {
+            break;
+          }
+          matched++;
         }
 
+        //if find a match, update all other
+        //parameters that aren't keys
+        if (matched == newObj.keys.length) {
+          if ('remove' in newObj) {
+            target.splice(y, 1);
+            continue;
+          }
+
+          for (var param in newObj) {
+            if (newObj.keys.indexOf(param) == -1 && param != 'keys') {
+
+              if(!(param in oldObj)){
+                continue;
+              }
+
+              if (typeof oldObj[param] == 'object' || (util.isArray(oldObj[param]) && oldObj[param].length > 0)) {
+                
+                oldObj[param] = this.mergeObjects(oldObj[param],newObj[param]);
+
+                continue;
+              }
+              oldObj[param] = newObj[param];
+            }
+          }
+          target[y] = oldObj;
+        }
       }
     }
-
-    return obj1;
+    return target;
   },
 
 
-  mergeArrays: function (arr1, arr2) {
+  mergeObjects: function (target, source) {
 
-/*
-    for (var i=0; i<arr2; i++) {
-
-      var value = arr2[i];
-      if (Object.prototype.toString.call(arr2[i]) == '[object Object]') {
-        value = this.mergeObjectRecursive()
-      } else {
-        if (Object.prototype.toString.call(arr2[i]) == '[object Array]') {
-          value = this.mergeArrays
-
-      }
-      if (arr1.indexOf(value) == -1) {
-        arr1.push(value)
-      }
+    if (typeof source == 'undefined') {
+      return target;
+    } else if (typeof target == 'undefined') {
+      return source;
     }
-    */
+
+    if (util.isArray(source)) {
+
+        if (source.length <= 0 ) {
+          target = source;
+          return target;
+        }
+        
+        //its an array of objects so process the objects in the array
+        if(typeof source[0] == 'object' && !util.isArray(source[0])) {
+
+          target = this.mergeObjectArray(target, source);
+          return target;
+        }
+
+        //it's just a normal array of values
+        //iterate over the array and set values as needed
+        //need to think about how to delete item from the array
+        for (var i=0; i < source.length; i++) {
+          
+          var value = source[i];
+          
+          if (target.indexOf(value) == -1)  {
+             target.push(value);
+          }
+        }
+        return target;      
+    } 
+
+    if (typeof source == 'object') {
+
+      for (var param in source) {
+
+        if (!(param in target)) {
+          logger.info(param + 'param not found in target');
+          continue;
+        }
+
+        if (typeof source[param] == 'object') {
+          target[param] = this.mergeObjects(target[param], source[param]);
+          continue;
+        }
+        target[param] = source[param];
+      }
+      return target;
+    }
+
+    return source;
   }
 
 });
@@ -832,9 +908,15 @@ var taskDef = {
 
          containerDefinitions:
           [ {
-             environment:
-               [ { name: 'TEST', value: '1234'},
-               { name: 'NODE_ENV', value: 'test', keys: ['name'] }]
+              name: 'dashboard',
+              portMappings:
+            [ { containerPort: 80, hostPort: 8070, protocol: 'udp' , keys:['containerPort', 'hostPort']}],
+               environment: [ 
+                  { name: 'TEST', value: '1234'},
+                  { name: 'NODE_ENV', value: 'test', keys: ['name'] , remove:true}
+              ],
+              links: ['a'],
+              keys: ['name']
             }
           ]
       };
@@ -845,7 +927,7 @@ var full = {
            image: 'registry.engagementcoach.com.au/frontend-prod:8',
            cpu: 110,
            memory: 496,
-           links: [],
+           links: ['a', 'b'],
            portMappings:
             [ { containerPort: 80, hostPort: 8070, protocol: 'tcp' }],
            essential: true,
@@ -868,10 +950,27 @@ var full = {
       status: 'ACTIVE'
     };
 
+
+var a = {           environment:
+            [ { name: 'NODE_ENV', value: 'production' },
+              { name: 'PASSENGER_APP_ENV', value: 'production' },
+              { name: 'DB_ENDPOINT', value: '10.0.1.24' },
+              { name: 'NEW_RELIC_LICENSE_KEY',
+                value: '159cc7eb7e0135f8f5c8e994cc373c883b8fec24' }
+            ]
+          };
+
+var b = {
+                environment: [ 
+                  { name: 'TEST', value: '1234'},
+                  { name: 'NODE_ENV', value: 'test', keys: ['name'] }
+              ]
+            };
+
 logger.level('debug');
 var output = mergeObjs(full, taskDef);
 
-//logger.debug(output);
+logger.debug(output);
 
 /*
     // if its an object
@@ -883,203 +982,129 @@ var output = mergeObjs(full, taskDef);
 
 */
 
-function isArray(o) {
-  return Object.prototype.toString.call(o) == "[object Array]";
-}
-
-function mergeObjs(def, obj) {
-
-  if (typeof obj == 'undefined') {
-    return def;
-  } else if (typeof def == 'undefined') {
-    return obj;
-  }
-
-  for (var i in obj) {
+function mergeObjectArray(target, source) {
 
 
-    // if its an array, simple values need to be joined.  Object values need to be remerged.
-    if (util.isArray(obj[i])) {
+  var objKeys = Object.keys(source[0]);
 
-      if (obj[i].length <= 0 ) {
-        def[i] = obj[i];
-        continue;
-      }
-      // test to see if the first element is an object or not so we know the type of array we're dealing with.
-      if(typeof obj[i][0] == 'object' && !util.isArray(obj[i][0])) {
+  //walk through objects in the array
+  for (var i=0; i<source.length; i++) {
 
-        var newobjs = [];
-        // create an index of all the existing object IDs for quick access.  There is no way to know how many items will be in the arrays.
+    var newObj = source[i];
 
-        var objKeys = Object.keys(obj[i][0]);
-
-          logger.debug(obj[i]);
-
-        //walk through objects in the array
-        for (var x=0; x<obj[i].length; x++) {
-
-          var newObj = obj[i][x];
-
-          //check if any keys have been defined
-          //to match the object
-          if (!('keys' in newObj)) {
-            //no keys so it must be a new item
-            //add it to the array
-            def[i].push(newObj);
-            continue;
-          }
-
-          logger.debug(newObj.keys);
-            //otherwise cycle through all the other objects
-            //in the array and to find an object that matches the keys
-          for (var y=0; y<def[i].length; y++) {
-            var oldObj = def[i][y];
-
-            var matched = 0;
-            for (var a=0; a<newObj.keys.length; a++) {
-              var key = newObj.keys[a];
-              if (!(key in oldObj) || oldObj[key] != newObj[key]) {
-                break;
-              }
-              matched++;
-            }
-
-            //if find a match, update all other
-            //parameters that aren't keys
-            if (matched == newObj.keys.length) {
-              if ('remove' in newObj) {
-                def[i].splice(y, 1);
-                continue;
-              }
-
-              for (param in newObj) {
-                if (newObj.keys.indexOf(param) == -1 && param != 'keys') {
-                  if(!(param in oldObj)){
-                    continue;
-                  }
-                  if (typeof oldObj[param] == 'object' || (util.isArray(oldObj[param]) && oldObj[param].length > 0)) {
-                    //
-                    oldObj[param] = mergeObjs(oldObj[param],newObj[param]);
-                    continue;
-                  }
-                  oldObj[param] = newObj[param];
-                }
-              }
-              def[i][y] = oldObj;
-            }
-          }
-        }
-      } else {
-        for(var x=0; x < obj[i].length; x++)
-        {
-          var value = obj[i][x];
-          if(def[i].indexOf(value) == -1) {
-             def[i].push(value);
-          }
-        }
-      }
-    }
-    else
-    {
-      def[i] = obj[i];
-    }
-  }
-  return def;
-}
-
-
-function arraysEqual(arr1, arr2) {
-    if(arr1.length !== arr2.length)
-        return false;
-    for(var i = arr1.length; i--;) {
-        if(arr1[i] !== arr2[i])
-            return false;
+    //check if any keys have been defined
+    //to match the object
+    if (!('keys' in newObj)) {
+      //no keys so add as new item
+      //add it to the array
+      target.push(newObj);
+      continue;
     }
 
-    return true;
-}
+      //otherwise cycle through all the other objects
+      //in the array and to find an object that matches the keys
+    for (var y=0; y<target.length; y++) {
+      var oldObj = target[y];
 
-// Assumes that target and source are either objects (Object or Array) or undefined
-// Since will be used to convert to JSON, just reference objects where possible
-function mergeObjects(target, source) {
-
-  var item, tItem, o, idx;
-
-  // If either argument is undefined, return the other.
-  // If both are undefined, return undefined.
-  if (typeof source == 'undefined') {
-    return source;
-  } else if (typeof target == 'undefined') {
-    return target;
-  }
-
-  // Assume both are objects and don't care about inherited properties
-  for (var prop in source) {
-    item = source[prop];
-
-    if (typeof item == 'object' && item !== null) {
-
-      if (isArray(item) && item.length) {
-
-        // deal with arrays, will be either array of primitives or array of objects
-        // If primitives
-        if (typeof item[0] != 'object') {
-
-          // if target doesn't have a similar property, just reference it
-          tItem = target[prop];
-          if (!tItem) {
-            target[prop] = item;
-
-          // Otherwise, copy only those members that don't exist on target
-          } else {
-
-            // Create an index of items on target
-            o = {};
-            for (var i=0, iLen=tItem.length; i<iLen; i++) {
-              o[tItem[i]] = true
-            }
-
-            // Do check, push missing
-            for (var j=0, jLen=item.length; j<jLen; j++) {
-
-              if ( !(item[j] in o) ) {
-                tItem.push(item[j]);
-              }
-            }
-          }
-        } else {
-          // Deal with array of objects
-          // Create index of objects in target object using ID property
-          // Assume if target has same named property then it will be similar array
-          idx = {};
-          tItem = target[prop]
-
-          for (var k=0, kLen=tItem.length; k<kLen; k++) {
-            idx[tItem[k].id] = tItem[k];
-          }
-
-          // Do updates
-          for (var l=0, ll=item.length; l<ll; l++) {
-            // If target doesn't have an equivalent, just add it
-            if (!(item[l].id in idx)) {
-              tItem.push(item[l]);
-            } else {
-              mergeObjects(idx[item[l].id], item[l]);
-            }
-          }
+      var matched = 0;
+      for (var a=0; a<newObj.keys.length; a++) {
+        var key = newObj.keys[a];
+        if (!(key in oldObj) || oldObj[key] != newObj[key]) {
+          break;
         }
-      } else {
-        // deal with object
-        mergeObjects(target[prop],item);
+        matched++;
       }
 
-    } else {
-      // item is a primitive, just copy it over
-      target[prop] = item;
+      //if find a match, update all other
+      //parameters that aren't keys
+      if (matched == newObj.keys.length) {
+        if ('remove' in newObj) {
+          target.splice(y, 1);
+          continue;
+        }
+
+        for (var param in newObj) {
+          if (newObj.keys.indexOf(param) == -1 && param != 'keys') {
+
+            if(!(param in oldObj)){
+              continue;
+            }
+
+            if (typeof oldObj[param] == 'object' || (util.isArray(oldObj[param]) && oldObj[param].length > 0)) {
+              
+              oldObj[param] = mergeObjs(oldObj[param],newObj[param]);
+
+              continue;
+            }
+            oldObj[param] = newObj[param];
+          }
+        }
+        target[y] = oldObj;
+      }
     }
   }
   return target;
 }
+
+
+function mergeObjs(target, source) {
+
+  if (typeof source == 'undefined') {
+    return target;
+  } else if (typeof target == 'undefined') {
+    return source;
+  }
+
+  if (util.isArray(source)) {
+
+      if (source.length <= 0 ) {
+        target = source;
+        return target;
+      }
+      
+      //its an array of objects so process the objects in the array
+      if(typeof source[0] == 'object' && !util.isArray(source[0])) {
+
+        target = mergeObjectArray(target, source);
+        return target;
+      }
+
+      //it's just a normal array of values
+      //iterate over the array and set values as needed
+      //need to think about how to delete item from the array
+      for (var i=0; i < source.length; i++) {
+        
+        var value = source[i];
+        
+        if (target.indexOf(value) == -1)  {
+           target.push(value);
+        }
+      }
+      return target;      
+  } 
+
+  if (typeof source == 'object') {
+
+    for (var param in source) {
+
+      if (!(param in target)) {
+        logger.info(param + 'param not found in target');
+        continue;
+      }
+
+      if (typeof source[param] == 'object') {
+        target[param] = mergeObjs(target[param], source[param]);
+        continue;
+      }
+      target[param] = source[param];
+    }
+    return target;
+  }
+
+  return source;
+}
+
+
 /*
 
 var vargs = {
