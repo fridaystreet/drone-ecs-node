@@ -93,13 +93,104 @@ This defaults to false as a safety precuation. If set to true it will allow matc
 
 
 ####task_definition  (optional)
-The task_definition setting lets you specify a full or part ECS JSON formatted task definition to override one or all settings within the existing task defintion.
+The task_definition setting lets you specify a full or part ECS JSON formatted task definition to override one or all settings within the existing task defintion. 
+
+The json string should be stored in a file in the workspace. ie if you had a file called taskdef.json store in the root of the workspace alongside the dron.yml file you would set thei parameter to :
+
+**task_definition: taskdef.json
+
+The intent of this setting was to be able to supply only those settings that needed to be modified and again not needing to maintain the entire definition, where some settings may have been added dynamically the CF.
+
+Some sugar has been added to the json format in order to support some of this functionality of updating / removing / adding settings in instances where the value of the parameter in the config is an array of objects.  
+
+This is acomplished by a recursive merging process that  drills down through the entire object processing each child individually.
+
+#####Examples
+Lets say you have a full container definition in ecs like this 
+```
+{
+      containerDefinitions:
+       [ 
+       { name: 'dashboard',
+           image: 'registry.mydomain.com/dashboard-prod:1.8.0',
+           cpu: 110,
+           memory: 496,
+           portMappings:
+            [ { containerPort: 80, hostPort: 8070, protocol: 'tcp' }],
+           essential: true,
+           entryPoint: [],
+           command: [],
+           environment:
+            [ { name: 'NODE_ENV', value: 'production' },
+              { name: 'PASSENGER_APP_ENV', value: 'production' },
+              { name: 'DB_ENDPOINT', value: '10.0.1.24' },
+              {name: 'SOMEKEY', value: 'jgjdqkjdhqdhamn'}
+            ],
+           mountPoints: [],
+           volumesFrom: []
+         },
+      ],
+      family: 'Production-DashboardTaskDefinition-95B1DSFHVJ1',
+      revision: 20,
+      volumes: []
+}
+```
+
+And you want to; 1. modify the port mapping, 2. Add an ENV var, 3. delete an ENV var. All you would need to specify in your json file, is the structure and values for the items you want to modify. Like this:
+
+``` 
+    {
+        containerDefinitions:
+        [ 
+            {
+              name: 'dashboard',
+              portMappings:
+              [
+               { containerPort: 80, hostPort: 8070, protocol: 'udp' , keys:['containerPort', 'hostPort']}
+              ],
+              environment: [ 
+                  { name: 'LOGGING_SERVER', value: 'log.mydomain.com'},
+                  { name: 'SOMEKEY', keys: ['name'] , remove:true}
+              ],
+              keys: ['name','cpu']
+            }
+      ]
+  } 
+```
+You'll notice there is a slight difference to the updated version, it has some aditional parameters within the objects. These are used in order to tell the plugin which objects in an array to operate on and what to do with them.
+
+Let's take the containerDefintions parameter to start with. It's in the root of the task defintiion structure and it is an array of objects detailing each container. Inside the root of the first container object, our updated file has an additional  parameters called 'keys'
+
+How does the keys parameter work?
+When the configurations are merged together and the plugin hits an array of objects in the provided json file, it looks to see if a 'keys' parameter exists.  If it does, then it looks through all of the array items in the current config and tries to match the values of those keys to parameters. 
+
+If it is able to match all of the keys for a given object in the array, then it will look for merges for any other parameters in the original config that exist in the new config and are not set as keys.
+
+Coming back to the initial example of the container definition, the keys in the root of the first container in the array are 'name' & 'cpu'. So as name and cpu in the new configurtion match a container in the old configuration, any parameters in the root of the container object not set as keys will be updated. In this case environment and portMappings can now be put through the merge process.
+
+
+The best way to think about it from this point is that the merge process is now passed the values of the portMappings parameter and starts the whole process above over again, but with the following 
+```
+    {
+      portMappings:
+      [
+           { containerPort: 80, hostPort: 8070, protocol: 'udp' , keys:['containerPort', 'hostPort']}
+      ]
+    }
+```
+So stepping through it again,  we have portMappings at the root, which is an array of objects. It iterates through each object looking for a 'keys' parameter. In this case we have one and it's asking to match containerPort & hostPort. 
+
+It pulls the portMappings array from the original ECS config and looks through the keys of each item to match containerPort: 80, hostPort: 8070. In our case there is a match and as there is another parameter 'protocol'  in our new config which isn't in the keys array for this object, the original config parameter is updated to be protocol: 'udp'
+
+
+
 
 
 ####log_level  (optional)
 Bunyan has been implemented as the logging library.  I haven't done much logging in the plugin.  defaults to info.
 
-The allowed log levels are 
+The allowed log levels are
+
   *info
 
         outputs a guide on what's currently being done,  eg Fetching clsuters from ECS. 
