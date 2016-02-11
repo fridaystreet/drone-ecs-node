@@ -52,7 +52,7 @@ However, please note that the following settings from drone-ecs are not used in 
   *environment_variables 
   *NAME=VALUE
 
-These settings are now handle in an ecs task definition configuration object. See below for details.
+These settings are now handle in an ecs task definition configuration object. See below for details. 
 
 ####cluster
 The cluster, service & family settings all do indexOf matches on the full Arn of the relative resource.  
