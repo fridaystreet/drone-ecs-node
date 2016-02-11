@@ -4,7 +4,7 @@
 [![Coverage Status](https://aircover.co/badges/drone-plugins/drone-ecs/coverage.svg)](https://aircover.co/drone-plugins/drone-ecs)
 [![](https://badge.imagelayers.io/plugins/drone-ecs:latest.svg)](https://imagelayers.io/?images=plugins/drone-ecs:latest 'Get your own badge on imagelayers.io')
 
-Drone plugin to deploy or update a project on AWS ECS. This has been model on the original drone-ecs plugin written in go, thansk to the drone team for their efforts and open sourcing their sofwtare. 
+Drone plugin to deploy or update a project on AWS ECS. This has been model on the original drone-ecs plugin written in go, thanks to the drone team for their efforts and open sourcing their sofwtare. 
 
 The original plugin while fully functional had not been designed or intended to be used with environments setup using cloud formation or complex ecs clusters with multiple servcies, tasks and multiple containers in task definitions. This plugin is intended to preserve existing configurations and handle the dynamic nature of cloudformation resources by using wildcards instead of fixed names. You can still use this plugin and the added config features with fixed names as well. It works exactly the same for both setups.
 
