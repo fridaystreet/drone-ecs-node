@@ -284,7 +284,7 @@ And you want to; 1. modify the port mapping, 2. Add an ENV var, 3. delete an ENV
 ```
 Let's take the containerDefintions parameter to start with. It's in the root of the task defintiion structure and it is an array of objects detailing each container. Inside the root of the first container object, our updated file has an additional  parameter called 'keys'
 
-The keys in the root of the first container in the array are 'name' & 'cpu'. So as name and cpu in the new configurtion match a container in the old configuration, any parameters in the root of the container object in the new configuration not set as keys will be updated. In this case environment and portMappings can now be put through the merge process.
+The keys in the root of the first container in the array are 'name' & 'cpu'. So as name and cpu in the new configuration match a container in the old configuration, any parameters in the root of the container object in the new configuration not set as keys will be updated. In this case environment and portMappings can now be put through the merge process.
 
 
 The best way to think about it from this point is that the merge process is now passed the values of the portMappings parameter and starts the whole process above over again, but with the following 
