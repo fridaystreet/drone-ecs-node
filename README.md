@@ -282,8 +282,6 @@ And you want to; 1. modify the port mapping, 2. Add an ENV var, 3. delete an ENV
       ]
   } 
 ```
-You'll notice there is a slight difference to the updated version, it has some aditional parameters within the objects. These are used in order to tell the plugin which objects in an array to operate on and what to do with them.
-
 Let's take the containerDefintions parameter to start with. It's in the root of the task defintiion structure and it is an array of objects detailing each container. Inside the root of the first container object, our updated file has an additional  parameters called 'keys'
 
 Coming back to the initial example of the container definition, the keys in the root of the first container in the array are 'name' & 'cpu'. So as name and cpu in the new configurtion match a container in the old configuration, any parameters in the root of the container object in the new configuration not set as keys will be updated. In this case environment and portMappings can now be put through the merge process.
