@@ -26,7 +26,7 @@ ecsService.prototype = Object.create({
 
   listClusters: function() {
 
-    logger.info('Fetching services from ECS');
+    logger.info('Fetching clusters from ECS');
 
     var _this = this;
     //1. list clusters
@@ -74,6 +74,7 @@ ecsService.prototype = Object.create({
 
   listServices: function() {
 
+    logger.info('Fetching services from ECS');
     var clusterArns = Object.keys(this.clusterArns);
     if (clusterArns.length <= 0) {
       throw new Error("No matches found for cluster name!");
@@ -365,11 +366,16 @@ ecsService.prototype = Object.create({
     for (var i=0; i<tasks.length; i++) {
 
       var task = tasks[i];
+      if (task.taskDefinitionArn.indexOf(this.vargs.Faimly) == -1) {
+        //skip this task as it doesn't match
+        logger.debug('Skipping task deifnition as no match to family: '+this.vargs.Family + ' taskdef Arn: ' + task.taskDefinitionArn);
+        continue;
+      }
       if (!(task.taskDefinitionArn in this.taskDefinitionArns)) {
         this.taskDefinitionArns[task.taskDefinitionArn] = [];
       }
 
-      task.serviceArn = this.taskArns[task.taskArn].serviceArn
+      task.serviceArn = this.taskArns[task.taskArn].serviceArn;
 
       this.taskDefinitionArns[task.taskDefinitionArn] = task;
     }
@@ -674,7 +680,7 @@ ecsService.prototype = Object.create({
       for (var param in source) {
 
         if (!(param in target)) {
-          logger.info(param + 'param not found in target');
+          logger.warn(param + 'param not found in target');
           continue;
         }
 

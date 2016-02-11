@@ -25,19 +25,20 @@ Example drone.yml file entry
 ```
 deploy:
   ecs:
-    image: fridaystreet/drone-ecs-node                                                      //path to plugin repo
-    region: ap-southeast-2                                                                            //aws region to use, currently only supports single region
-    access_key: $$AWS_KEY                                                                      //aws access key 
-    secret_key: $$AWS_SECRET                                                                //aws secret key
-    image_name: <my registery domain>/dashboard                             //name of image without tag. 
-    image_tag: "1.0.$$BUILD_NUMBER"                                                 //build number
-    cluster: Production-DashboardCluster                                                //base family name (can just be a part string wildcard like Dashboard)
-
-    family: Production-DashboardTaskDefinition                                      //base family name (can just be a part string wildcard like Dashboard)
-    service: Production-DashboardService                                               //base service name. (can just be a part string wildcard like Dashboard)
-    ConstainerName: dashboard                                                               //the name of the container in the definition that uses this image         
-    AllowMultipleClusters: false                                                    //with this set to false (default) if the cluster name/wildcard matches multiple clusters the d
-    AllowMultipleServices: false
+    image: fridaystreet/drone-ecs-node                               //path to plugin repo
+    region: ap-southeast-2                                                     //aws region to use, currently only supports single region
+    access_key: $$AWS_KEY                                               //aws access key 
+    secret_key: $$AWS_SECRET                                        //aws secret key
+    image_name: registry.mydomain.com/dashboard     //name of image without tag. 
+    image_tag: "1.0.$$BUILD_NUMBER"                          //image tag
+    cluster: Production-DashboardCluster                         //base cluster name / wildcard
+    family: Production-DashboardTaskDefinition             //base family name / wildcard
+    service: Production-DashboardService                       //base service name / wildcard
+    constainer_name: dashboard                                        //the name of the container in the definition that uses this image         
+    allow_multiple_clusters: false                                        //update services on multiple clusters if matched
+    allow_multiple_services: false                                      //update multiple services on a clusters if matched
+    log_level: 'debug'                                                            //logging level to output
+    task_definition: myTaskDefFile.json                            //relevant path to JSON format taskDefinition file
 ```
 ### Settings explained
 
@@ -53,6 +54,62 @@ However, please note that the following settings from drone-ecs are not used in 
 
 These settings are now handle in an ecs task definition configuration object. See below for details.
 
+####cluster
+The cluster, service & family settings all do indexOf matches on the full Arn of the relative resource.  
+
+This means that is you have a cluster with an Arn of :
+
+**arn:aws:ecs:ap-southeast-2:217249687128:cluster/Production-ServicesCluster-8LVWYYRDXQUU
+(the -8LVWYYRDXQUU is a random string that is attached to the base name by the cloudformation deployment)
+
+You could access the cluster with the plugin by setting the cluster parameter to either of the following (not exhuastive):
+*arn:aws:ecs:ap-southeast-2:217249687128:cluster/Production-ServicesCluster-8LVWYYRDXQUU
+*Production-ServicesCluster-8LVWYYRDXQUU
+*Production-ServicesCluster
+*ServicesCluster
+
+As you can see, if you're using cloud formation to deploy, this give you the ability to maintain consistent base names and not need to worry about updating your drone.yml files everytime a CF deployment takes place.
+
+It also makes it possible to update multiple clusters at the same time. If you used the last example 'ServicesCluster' as the wildcard and you also had a cluster called 'Staging'-ServicesCluster', then it would also be able to update services in that cluster. Providing they matched the services name/wildcard parameter. This behavouir can be controlled via allow_multiple_clusters. See below.
+
+####service
+The service parameter operates as per above and matches the full service arn to the widlcard. As services are located on a cluster by cluster basis, this means you could mach multiple services inthe same cluster.
+
+Again a good example is if you have a environment where instead of using different clusters for different environments you use the same cluster with different services. This is probably a pretty rare use case, but it's handled anyway. This behavouir can be controlled via allow_multiple_services. See below.
+
+####family
+The family parameter operates as a wildcard as well, but it is used to match to task definitions. When the plugin matches a cluster and service, it retrieves all the current tasks within that service. From these tasks it derives the currently active task definitions. These are matched / filtered by this setting to determine which task definitions to update.
+
+####constainer_name
+The container name is required in order to determine which conatiner within the task definition to update the image name for this build. This setting is intended to accomodate definitions with multiple containers. 
+
+Note - It is a case insensitive exact match on the name. It does not support wildcards.
+
+####allow_multiple_clusters  (optional)
+This defaults to false as a safety precuation. If set to true it will allow matched definitions in multiple clusters to be updated at once. 
+
+####allow_multiple_services  (optional)
+This defaults to false as a safety precuation. If set to true it will allow matched definitions in multiple services in the same cluster to be updated at once. 
+
+
+####task_definition  (optional)
+The task_definition setting lets you specify a full or part ECS JSON formatted task definition to override one or all settings within the existing task defintion.
+
+
+####log_level  (optional)
+Bunyan has been implemented as the logging library.  I haven't done much logging in the plugin.  defaults to info.
+
+The allowed log levels are 
+    *info
+    --outputs a guide on what's currently being done,  eg Fetching clsuters from ECS. 
+    *fatal
+    --all ecs requests with throw an exception is there is an error
+    *error
+    --generally just validation errors for the plugin settings
+    *warn
+    --outputs some errors with task definition file if supplied
+    *debug
+    --outputs all the ecs request parameters and responses. Also the updated definitions if a task definition file was supplied
 
 
 ##Development
