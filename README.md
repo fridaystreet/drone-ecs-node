@@ -25,12 +25,12 @@ Example drone.yml file entry
 ```
 deploy:
   ecs:
-    image: fridaystreet/drone-ecs-node                               //path to plugin repo
-    region: ap-southeast-2                                                     //aws region to use, currently only supports single region
+    image: fridaystreet/drone-ecs-node                              //path to plugin repo
+    region: ap-southeast-2                                                      //aws region to use, currently only supports single region
     access_key: $$AWS_KEY                                               //aws access key 
     secret_key: $$AWS_SECRET                                        //aws secret key
     image_name: registry.mydomain.com/dashboard     //name of image without tag. 
-    image_tag: "1.0.$$BUILD_NUMBER"                          //image tag
+    image_tag: "1.0.$$BUILD_NUMBER"                           //image tag
     cluster: Production-DashboardCluster                         //base cluster name / wildcard
     family: Production-DashboardTaskDefinition             //base family name / wildcard
     service: Production-DashboardService                       //base service name / wildcard
@@ -42,8 +42,7 @@ deploy:
 ```
 ### Settings explained
 
-Note - The following settings are not used with 
-Any settings that aren't listed below, operate in exactly the same way as drone-ecs http://readme.drone.io/plugins/ecs 
+Note - The following settings from drone-ecs are not used. 
 
 However, please note that the following settings from drone-ecs are not used in drone-ecs-node:
 
@@ -53,6 +52,8 @@ However, please note that the following settings from drone-ecs are not used in 
   *NAME=VALUE
 
 These settings are now handle in an ecs task definition configuration object. See below for details. 
+
+Note - Any settings that aren't listed below, operate in exactly the same way as drone-ecs http://readme.drone.io/plugins/ecs 
 
 ####cluster
 The cluster, service & family settings all do indexOf matches on the full Arn of the relative resource.  
@@ -315,7 +316,7 @@ The allowed log levels are
         outputs a guide on what's currently being done,  eg Fetching clsuters from ECS. 
   *fatal
 
-        all ecs requests with throw an exception is there is an error
+        all ecs requests will throw an exception if there is an error
   *error
 
         generally just validation errors for the plugin settings
