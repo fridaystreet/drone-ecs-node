@@ -551,7 +551,7 @@ ecsService.prototype = Object.create({
          if (err) {
             throw new Error(err); // an error occurred
           } else {
-            logger.debug('updateService callback response for service: ' + taskDef.serviceArn + ' task def: ' + taskDefArn, data);           // successful response
+            logger.debug('updateService callback response for service: ' + taskDef.serviceArn + ' task def: ' + taskDefArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
             return resolve(data);
           }
         });
@@ -967,145 +967,6 @@ var b = {
               ]
             };
 
-logger.level('debug');
-var output = mergeObjs(full, taskDef);
-
-logger.debug(output);
-
-/*
-    // if its an object
-    if (typeof obj[i] == 'object')
-    {
-      logger.debug(i);
-      def[i] = mergeObjs(def[i], obj[i]);
-    }
-
-*/
-
-function mergeObjectArray(target, source) {
-
-
-  var objKeys = Object.keys(source[0]);
-
-  //walk through objects in the array
-  for (var i=0; i<source.length; i++) {
-
-    var newObj = source[i];
-
-    //check if any keys have been defined
-    //to match the object
-    if (!('keys' in newObj)) {
-      //no keys so add as new item
-      //add it to the array
-      target.push(newObj);
-      continue;
-    }
-
-      //otherwise cycle through all the other objects
-      //in the array and to find an object that matches the keys
-    for (var y=0; y<target.length; y++) {
-      var oldObj = target[y];
-
-      var matched = 0;
-      for (var a=0; a<newObj.keys.length; a++) {
-        var key = newObj.keys[a];
-        if (!(key in oldObj) || oldObj[key] != newObj[key]) {
-          break;
-        }
-        matched++;
-      }
-
-      //if find a match, update all other
-      //parameters that aren't keys
-      if (matched == newObj.keys.length) {
-        if ('remove' in newObj) {
-          target.splice(y, 1);
-          continue;
-        }
-
-        for (var param in newObj) {
-          if (newObj.keys.indexOf(param) == -1 && param != 'keys') {
-
-            if(!(param in oldObj)){
-              continue;
-            }
-
-            if (typeof oldObj[param] == 'object' || (util.isArray(oldObj[param]) && oldObj[param].length > 0)) {
-              
-              oldObj[param] = mergeObjs(oldObj[param],newObj[param]);
-
-              continue;
-            }
-            oldObj[param] = newObj[param];
-          }
-        }
-        target[y] = oldObj;
-      }
-    }
-  }
-  return target;
-}
-
-
-function mergeObjs(target, source) {
-
-  if (typeof source == 'undefined') {
-    return target;
-  } else if (typeof target == 'undefined') {
-    return source;
-  }
-
-  if (util.isArray(source)) {
-
-      if (source.length <= 0 ) {
-        target = source;
-        return target;
-      }
-      
-      //its an array of objects so process the objects in the array
-      if(typeof source[0] == 'object' && !util.isArray(source[0])) {
-
-        target = mergeObjectArray(target, source);
-        return target;
-      }
-
-      //it's just a normal array of values
-      //iterate over the array and set values as needed
-      //need to think about how to delete item from the array
-      for (var i=0; i < source.length; i++) {
-        
-        var value = source[i];
-        
-        if (target.indexOf(value) == -1)  {
-           target.push(value);
-        }
-      }
-      return target;      
-  } 
-
-  if (typeof source == 'object') {
-
-    for (var param in source) {
-
-      if (!(param in target)) {
-        logger.info(param + 'param not found in target');
-        continue;
-      }
-
-      if (typeof source[param] == 'object') {
-        target[param] = mergeObjs(target[param], source[param]);
-        continue;
-      }
-      target[param] = source[param];
-    }
-    return target;
-  }
-
-  return source;
-}
-
-
-/*
 
 var vargs = {
   build: '',
@@ -1154,36 +1015,42 @@ var ecs = new ecsService(awsOptions, vargs);
     ecs.listClusters()
     .then(function (data) {
 
+      logger.debug('list clusters', util.inspect(data, { showHidden: true, depth: null }));
       ecs.processClusters(data);
       return ecs.listServices();
     })
     .then(function (data) {
 
+      logger.debug('list services', util.inspect(data, { showHidden: true, depth: null }));
       ecs.processServicesList(data);
       return ecs.describeServices();
     })
     .then(function (data) {
 
+      logger.debug('describe services', util.inspect(data, { showHidden: true, depth: null }));
       ecs.processServiceDescriptions(data);
       return ecs.listTasks();
     })
     .then(function (data) {
 
+      logger.debug('list tasks', util.inspect(data, { showHidden: true, depth: null }));
       ecs.processTasksList(data);
       return ecs.describeTasks();
     })
     .then(function (data) {
 
+      logger.debug('describe tasks', util.inspect(data, { showHidden: true, depth: null }));
       ecs.processTaskDescriptions(data);
       return ecs.describeTaskDefinitions();
     })
     .then(function (data) {
 
+      logger.debug('describe task definitions', util.inspect(data, { showHidden: true, depth: null }));
       return ecs.registerTaskDefinitions(data);
     })
     .then(function (data) {
 
-      console.log('final', data);
+      logger.debug('final', util.inspect(data, { showHidden: true, depth: null }));
     })
 /*
     .then(function (data) {
@@ -1197,10 +1064,10 @@ var ecs = new ecsService(awsOptions, vargs);
       return process.exit(0);
 
     })
+*/    
     .catch(function (err) {
 
       logger.error('catch', err, err.stack);
       return process.exit(1);
     });
-*/
 
