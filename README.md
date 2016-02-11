@@ -124,7 +124,7 @@ Output
 
 #####Modifying values that are part of an object in an array of objects
 
-When the configurations are merged together and the plugin hits an array of objects in the provided json file, it looks to see if a 'keys' parameter exists.  If it does, then it looks through all of the array items in the current config and tries to match the values of those keys in the new config to values of the keys in the old config. It's pretty much just setting up a hash of fields in roder to make a uniuqe match. 
+When the configurations are merged together and the plugin hits an array of objects in the provided json file, it looks to see if a 'keys' parameter exists.  If it does, then it looks through all of the array items in the current config and tries to match the values of those keys in the new config to values of the keys in the old config. It's pretty much just setting up a hash of fields in order to make a uniuqe match. 
 
 You can use one or more fields, just depends how specific you need to be in order to make the match. For environment vars for instance, no 2 will have the same name, so just specifying name would be enough. 
 
@@ -207,20 +207,23 @@ Note - In the new config file, you only need to specify the parameters you want 
 Adding a new item to a simple array is as simple as just specifying an array with the value you want to add.
 
 Original
-```{
+```
+{
     links: [ ]
-    }
+}
 ```
 
 New
-```{
+```
+{
     links: ['dbcontainer']
-    }
+}
 ```
 Output
-```{
+```
+{
     links: ['dbcontainer']
-    }
+}
 ```
 
 
