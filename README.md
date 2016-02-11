@@ -95,15 +95,122 @@ This defaults to false as a safety precuation. If set to true it will allow matc
 ####task_definition  (optional)
 The task_definition setting lets you specify a full or part ECS JSON formatted task definition to override one or all settings within the existing task defintion. 
 
-The json string should be stored in a file in the workspace. ie if you had a file called taskdef.json store in the root of the workspace alongside the dron.yml file you would set thei parameter to :
+The json string should be stored in a file in the workspace. ie if you had a file called taskdef.json store in the root of the workspace alongside the drone.yml file you would set the parameter to:
 
 **task_definition: taskdef.json
 
-The intent of this setting was to be able to supply only those settings that needed to be modified and again not needing to maintain the entire definition, where some settings may have been added dynamically the CF.
+The intent of this setting was to be able to supply only those settings that needed to be modified and again not needing to maintain the entire definition, where some settings may have been added dynamically by the CF deployment.
 
 Some sugar has been added to the json format in order to support some of this functionality of updating / removing / adding settings in instances where the value of the parameter in the config is an array of objects.  
 
 This is acomplished by a recursive merging process that  drills down through the entire object processing each child individually.
+
+#####Modifying simple values (eg strings, integers)
+
+#####Modifying values that are part of an object in an array of objects
+
+When the configurations are merged together and the plugin hits an array of objects in the provided json file, it looks to see if a 'keys' parameter exists.  If it does, then it looks through all of the array items in the current config and tries to match the values of those keys in the new config to values of the keys in the old config. It's pretty much just setting up a hash of fields in roder to make a uniuqe match. 
+
+You can use one or more fields, just depends how specific you need to be in order to make the match. For environment vars for instance, no 2 will have the same name, so just specifying name would be enough. 
+
+If it is able to match all of the keys for a given object in the array, then it will look to merge any other parameters in the original config that exist in the new config and are not set as keys.
+
+Original
+```
+    [
+    {name: 'NODE_ENV', value: 'Production-1'}
+    ]
+```
+
+New
+```
+    [
+    {name: 'NODE_ENV', value: 'Production-2', keys: ['name']}
+    ]
+```
+
+Output
+```
+    [
+    {name: 'NODE_ENV', value: 'Production-2'}
+    ]
+```
+
+See the example below to get a handle on how this actually looks.
+
+
+#####Adding new objects to an object array
+
+As an opposite to the above of modifying an existing object in an array, if you define an object in an array inside your new config file and do not specify a keys parameter, then it will assume this is a new object and just append the object to the array.
+
+Original
+```
+    [    ]
+```
+
+New
+```
+    [
+    {name: 'NODE_ENV', value: 'Production-1'}
+    ]
+```
+
+Output
+```
+    [
+    {name: 'NODE_ENV', value: 'Production-1'}
+    ]
+```
+
+#####Removing objects from an object array
+
+Removing objects works similar to modifying, you need to specify a keys parameters with an array of parameters to match the values of between the current and new config. In order to remove the matched objects, you just need to add an additonal parameter to the object 'remove:true'
+
+Original
+```
+    [
+    {name: 'NODE_ENV', value: 'Production-1'}
+    ]
+```
+
+New
+```
+    [
+    {name: 'NODE_ENV', keys: ['name'], remove: true}
+    ]
+```
+
+Output
+```
+    [    ]
+```
+
+Note - In the new config file, you only need to specify the parameters you want to modify and the keys you want to match. For remove, we don't want to modify anything so we do't need to worry about sepcifying the 'value' parameter. This goes the same for modifying.
+
+
+#####Adding new items to a simple array
+Adding a new item to a simple array is as simple as just specifying an array with the value you want to add.
+
+Original
+```{
+    links: [ ]
+    }
+```
+
+New
+```{
+    links: ['dbcontainer']
+    }
+```
+Output
+```{
+    links: ['dbcontainer']
+    }
+```
+
+
+#####Removing items from a simple array
+This is not yet implemented. 
 
 #####Examples
 Lets say you have a full container definition in ecs like this 
@@ -161,12 +268,7 @@ You'll notice there is a slight difference to the updated version, it has some a
 
 Let's take the containerDefintions parameter to start with. It's in the root of the task defintiion structure and it is an array of objects detailing each container. Inside the root of the first container object, our updated file has an additional  parameters called 'keys'
 
-How does the keys parameter work?
-When the configurations are merged together and the plugin hits an array of objects in the provided json file, it looks to see if a 'keys' parameter exists.  If it does, then it looks through all of the array items in the current config and tries to match the values of those keys to parameters. 
-
-If it is able to match all of the keys for a given object in the array, then it will look for merges for any other parameters in the original config that exist in the new config and are not set as keys.
-
-Coming back to the initial example of the container definition, the keys in the root of the first container in the array are 'name' & 'cpu'. So as name and cpu in the new configurtion match a container in the old configuration, any parameters in the root of the container object not set as keys will be updated. In this case environment and portMappings can now be put through the merge process.
+Coming back to the initial example of the container definition, the keys in the root of the first container in the array are 'name' & 'cpu'. So as name and cpu in the new configurtion match a container in the old configuration, any parameters in the root of the container object in the new configuration not set as keys will be updated. In this case environment and portMappings can now be put through the merge process.
 
 
 The best way to think about it from this point is that the merge process is now passed the values of the portMappings parameter and starts the whole process above over again, but with the following 
