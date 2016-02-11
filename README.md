@@ -10,7 +10,7 @@ The original plugin while fully functional had not been designed or intended to 
 
 Another challenge with cloudformation is the management of enviornment variables. The are scenarios where environment variables for task deifnitions that point to other resources are set dynamically when the cloudformation script is run. Having to maintain these variable values manually in the drone.yml is not practical. 
 
-This plugin handles this situation, by first retrieving the existing task definitions and using them as a template for the new definition. This way the configuration is preserved from the initial cloudformation deployment through subsequent drone deployments. In order to update the configuration, the plugin provides the ability to make changes to explicit parts of the configuration as required the configuration through the drone.yml file, while leaving the remaining configuration in tact. 
+This plugin handles this situation by first retrieving the existing task definitions and using them as a template for the new definition. This way the configuration is preserved from the initial cloudformation deployment through subsequent drone deployments. In order to update the configuration, the plugin provides the ability to make changes to explicit parts of the configuration as required through the drone.yml file, while leaving the remaining configuration in tact. 
 
 Full examples of all functionality are available below.
 
@@ -22,7 +22,7 @@ If you find it useful and want to contribute, pull requests are more than welcom
 
 
 Example drone.yml file entry
-
+```
 deploy:
   ecs:
     image: fridaystreet/drone-ecs-node                                                      //path to plugin repo
@@ -38,7 +38,7 @@ deploy:
     ConstainerName: dashboard                                                               //the name of the container in the definition that uses this image         
     AllowMultipleClusters: false                                                    //with this set to false (default) if the cluster name/wildcard matches multiple clusters the d
     AllowMultipleServices: false
-
+```
 ### Settings explained
 
 Note - The following settings are not used with 
