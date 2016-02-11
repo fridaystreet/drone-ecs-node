@@ -107,6 +107,24 @@ This is acomplished by a recursive merging process that  drills down through the
 
 #####Modifying simple values (eg strings, integers)
 
+This is just a case of specifying the parameter and value
+
+Original
+```{
+cpu: 110
+```}
+
+New
+```{
+cpu: 250
+```}
+
+Output
+```{
+cpu: 250
+```}
+
+
 #####Modifying values that are part of an object in an array of objects
 
 When the configurations are merged together and the plugin hits an array of objects in the provided json file, it looks to see if a 'keys' parameter exists.  If it does, then it looks through all of the array items in the current config and tries to match the values of those keys in the new config to values of the keys in the old config. It's pretty much just setting up a hash of fields in roder to make a uniuqe match. 
