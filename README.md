@@ -300,6 +300,7 @@ So stepping through it again,  we have portMappings at the root, which is an arr
 
 It pulls the portMappings array from the original ECS config and looks through the keys of each item to match containerPort: 80, hostPort: 8070. In our case there is a match and as there is another parameter 'protocol'  in our new config which isn't in the keys array for this object, the original config parameter is updated to be protocol: 'udp'
 
+This process is then repeated for environments. and all other parameters recursively that are specified in the new json defintion file.
 
 
 
