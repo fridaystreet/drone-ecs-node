@@ -110,13 +110,17 @@ This is acomplished by a recursive merging process that  drills down through the
 This is just a case of specifying the parameter and value
 
 Original
-```{cpu: 110}
-
+```
+{cpu: 110}
+```
 New
-```{cpu: 250}
-
+```
+{cpu: 250}
+```
 Output
-```{cpu: 250}
+```
+{cpu: 250}
+```
 
 #####Modifying values that are part of an object in an array of objects
 
@@ -324,7 +328,7 @@ The allowed log levels are
 ##Development
 
 ### Install 
-
-```npm install
-
+```
+npm install
+```
 
