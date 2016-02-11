@@ -112,6 +112,9 @@ This is just a case of specifying the parameter and value
 Original
 ```{cpu: 110}
 
+New
+```{cpu: 250}
+
 Output
 ```{cpu: 250}
 
