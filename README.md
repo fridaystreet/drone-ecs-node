@@ -67,12 +67,12 @@ You could access the cluster with the plugin by setting the cluster parameter to
   *Production-ServicesCluster
   *ServicesCluster
 
-As you can see, if you're using cloud formation to deploy, this give you the ability to maintain consistent base names and not need to worry about updating your drone.yml files everytime a CF deployment takes place.
+As you can see, if you're using cloud formation to deploy, this gives you the ability to maintain consistent base names and not need to worry about updating your drone.yml files everytime a CF deployment takes place.
 
-It also makes it possible to update multiple clusters at the same time. If you used the last example 'ServicesCluster' as the wildcard and you also had a cluster called 'Staging'-ServicesCluster', then it would also be able to update services in that cluster. Providing they matched the services name/wildcard parameter. This behavouir can be controlled via allow_multiple_clusters. See below.
+It also makes it possible to update multiple clusters at the same time. If you used the last example 'ServicesCluster' as the wildcard and you also had a cluster called 'Staging-ServicesCluster', then it would also be able to update services in that cluster. Providing they matched the services name/wildcard parameter. This behavouir can be controlled via allow_multiple_clusters. See below.
 
 ####service
-The service parameter operates as per above and matches the full service arn to the widlcard. As services are located on a cluster by cluster basis, this means you could mach multiple services inthe same cluster.
+The service parameter operates as per above and matches the full service arn to the widlcard. As services are located on a cluster by cluster basis, this means you could match multiple services inthe same cluster.
 
 Again a good example is if you have a environment where instead of using different clusters for different environments you use the same cluster with different services. This is probably a pretty rare use case, but it's handled anyway. This behavouir can be controlled via allow_multiple_services. See below.
 
@@ -82,7 +82,7 @@ The family parameter operates as a wildcard as well, but it is used to match to 
 ####constainer_name
 The container name is required in order to determine which conatiner within the task definition to update the image name for this build. This setting is intended to accomodate definitions with multiple containers. 
 
-Note - It is a case insensitive exact match on the name. It does not support wildcards.
+Note - It is a non-case sensitive exact match on the name. It does not support wildcards.
 
 ####allow_multiple_clusters  (optional)
 This defaults to false as a safety precuation. If set to true it will allow matched definitions in multiple clusters to be updated at once. 
