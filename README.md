@@ -42,9 +42,7 @@ deploy:
 ```
 ### Settings explained
 
-Note - The following settings from drone-ecs are not used. 
-
-However, please note that the following settings from drone-ecs are not used in drone-ecs-node:
+Note - The following settings from drone-ecs are not used in drone-ecs-node. 
 
   *port_mappings
   *memory
