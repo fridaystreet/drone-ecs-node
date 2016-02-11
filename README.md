@@ -47,10 +47,10 @@ Any settings that aren't listed below, operate in exactly the same way as drone-
 
 However, please note that the following settings from drone-ecs are not used in drone-ecs-node:
 
-*port_mappings
-*memory
-*environment_variables 
-*NAME=VALUE
+  *port_mappings
+  *memory
+  *environment_variables 
+  *NAME=VALUE
 
 These settings are now handle in an ecs task definition configuration object. See below for details.
 
@@ -63,10 +63,10 @@ This means that is you have a cluster with an Arn of :
 (the -8LVWYYRDXQUU is a random string that is attached to the base name by the cloudformation deployment)
 
 You could access the cluster with the plugin by setting the cluster parameter to either of the following (not exhuastive):
-*arn:aws:ecs:ap-southeast-2:217249687128:cluster/Production-ServicesCluster-8LVWYYRDXQUU
-*Production-ServicesCluster-8LVWYYRDXQUU
-*Production-ServicesCluster
-*ServicesCluster
+  *arn:aws:ecs:ap-southeast-2:217249687128:cluster/Production-ServicesCluster-8LVWYYRDXQUU
+  *Production-ServicesCluster-8LVWYYRDXQUU
+  *Production-ServicesCluster
+  *ServicesCluster
 
 As you can see, if you're using cloud formation to deploy, this give you the ability to maintain consistent base names and not need to worry about updating your drone.yml files everytime a CF deployment takes place.
 
@@ -100,16 +100,21 @@ The task_definition setting lets you specify a full or part ECS JSON formatted t
 Bunyan has been implemented as the logging library.  I haven't done much logging in the plugin.  defaults to info.
 
 The allowed log levels are 
-    *info
-    --outputs a guide on what's currently being done,  eg Fetching clsuters from ECS. 
-    *fatal
-    --all ecs requests with throw an exception is there is an error
-    *error
-    --generally just validation errors for the plugin settings
-    *warn
-    --outputs some errors with task definition file if supplied
-    *debug
-    --outputs all the ecs request parameters and responses. Also the updated definitions if a task definition file was supplied
+  *info
+
+        outputs a guide on what's currently being done,  eg Fetching clsuters from ECS. 
+  *fatal
+
+        all ecs requests with throw an exception is there is an error
+  *error
+
+        generally just validation errors for the plugin settings
+  *warn
+
+        outputs some errors with task definition file if supplied
+  *debug
+
+        outputs all the ecs request parameters and responses. Also the updated definitions if a task definition file was supplied
 
 
 ##Development
