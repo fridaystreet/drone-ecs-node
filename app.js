@@ -726,6 +726,7 @@ plugin.parse().then(function (params) {
   const vargs = params.vargs;
 
 
+
   var logLevels = [
     'info',
     'fatal',
@@ -746,6 +747,10 @@ plugin.parse().then(function (params) {
 
 
   logger.level(logLevel);
+
+  if (vargs.dryRun) {
+    logger.info('Running in Dry Run mode, no changes will be sent to ECS');
+  }
 
   logger.info('Validating Paramters');
 
@@ -857,10 +862,13 @@ plugin.parse().then(function (params) {
     ecs.processTaskDescriptions(data);
     return ecs.describeTaskDefinitions();
   })
-  /*
   .then(function (data) {
 
     logger.debug('describe task definitions', util.inspect(data, { showHidden: true, depth: null }));
+    if (vargs.dryRun) {
+      logger.info('Exiting dry run before writing any changes to ECS');
+      return process.exit(1);
+    }
     return ecs.registerTaskDefinitions(data);
   })
   .then(function (data) {
@@ -868,7 +876,6 @@ plugin.parse().then(function (params) {
     logger.info('Register Task Defintions Success:', util.inspect(data, { showHidden: true, depth: null }));
     return ecs.updateServices(data);
   })
-*/
   .then(function (data) {
 
     logger.info('Update Service Success:', util.inspect(data, { showHidden: true, depth: null }));
