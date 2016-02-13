@@ -1,15 +1,19 @@
-//const Drone = require('drone-node');
-//const plugin = new Drone.Plugin();
+'use strict'
+
+const Drone = require('drone-node');
+const plugin = new Drone.Plugin();
 const AWS = require('aws-sdk');
 const Promise = require('bluebird');
 const bunyan = require('bunyan');
-const logger = bunyan.createLogger({name: 'drone-ecs-node'});
 const util = require('util');
+const jsonfile = require('jsonfile');
+const humps = require('./humps');
 
-function ecsService (options, vargs) {
+function ecsService (awsOptions, vargs, logger) {
 
   this.ecs = new AWS.ECS(awsOptions);
   this.vargs = vargs;
+  this.logger = logger;
   return;
 }
 
@@ -26,18 +30,17 @@ ecsService.prototype = Object.create({
 
   listClusters: function() {
 
-    logger.info('Fetching clusters from ECS');
+    this.logger.info('Fetching clusters from ECS');
 
-    var _this = this;
     //1. list clusters
-    return new Promise(function (resolve) {
+    return new Promise((resolve) => {
 
-      _this.ecs.listClusters({maxResults: 100}, function (err, data) {
+      this.ecs.listClusters({maxResults: 100}, (err, data) => {
 
         if (err) {
           throw new Error(err); // an error occurred
         } else {
-            logger.debug('listClusters response', util.inspect(data, { showHidden: true, depth: null }));
+            this.logger.debug('listClusters response', util.inspect(data, { showHidden: true, depth: null }));
             return resolve(data);
         }
       });
@@ -57,8 +60,8 @@ ecsService.prototype = Object.create({
       var clusterArn = clusterArns[i].toLowerCase();
 
 
-      if (clusterArn.indexOf(this.vargs.Cluster.toLowerCase()) != -1) {
-        if (this.clusterArns.length > 0 && this.vargs.AllowMultipleClusters === false) {
+      if (clusterArn.indexOf(this.vargs.cluster.toLowerCase()) != -1) {
+        if (this.clusterArns.length > 0 && this.vargs.allowMultipleClusters === false) {
           var error = "Matched multiple clusters, cluster name is too ambiguous!";
           error += "\nSet AllowMultipleClusters to true to override";
           throw new Error(error);
@@ -67,21 +70,20 @@ ecsService.prototype = Object.create({
       }
     }
 
-    if (this.clusterArns.length <= 0) {
+    if (Object.keys(this.clusterArns).length <= 0) {
       throw new Error("No matches found for cluster name!");
     }
   },
 
   listServices: function() {
 
-    logger.info('Fetching services from ECS');
+    this.logger.info('Fetching services from ECS');
     var clusterArns = Object.keys(this.clusterArns);
     if (clusterArns.length <= 0) {
       throw new Error("No matches found for cluster name!");
     }
 
     var promises = [];
-    var _this = this;
 
     for (var x=0; x<clusterArns.length; x++) {
 
@@ -91,15 +93,15 @@ ecsService.prototype = Object.create({
         maxResults: 100,
       };
 
-      logger.debug('listServices Request Parameters', params);
+      this.logger.debug('listServices Request Parameters', params);
 
-      var promise = new Promise(function (resolve) {
-          _this.ecs.listServices(params, function (err, data) {
+      var promise = new Promise((resolve) => {
+          this.ecs.listServices(params, (err, data) => {
             if (err) {
               throw new Error(err);
             }
             data.clusterArn = clusterArn;
-            logger.debug('listServices callback response for cluster: ' + clusterArn, util.inspect(data, { showHidden: true, depth: null }));
+            this.logger.debug('listServices callback response for cluster: ' + clusterArn, util.inspect(data, { showHidden: true, depth: null }));
             return resolve(data);
           });
         });
@@ -107,8 +109,8 @@ ecsService.prototype = Object.create({
       //list services
       promises.push(promise);
     }
-    return Promise.all(promises).then(function (values) {
-      data = [];
+    return Promise.all(promises).then((values) => {
+      var data = [];
       for (var i=0; i<values.length; i++) {
         data.push(values[i]);
       }
@@ -136,8 +138,8 @@ ecsService.prototype = Object.create({
 
         var service = services[x].toLowerCase();
 
-        if (service.indexOf(this.vargs.Service.toLowerCase()) != -1) {
-          if (this.serviceArns.length > 0 && this.vargs.AllowMultipleServices === false) {
+        if (service.indexOf(this.vargs.service.toLowerCase()) != -1) {
+          if (this.serviceArns.length > 0 && this.vargs.allowMultipleServices === false) {
             var error = "Matched multiple services, service name is too ambiguous!";
             error += "\nSet AllowMultipleServices to true to override";
             throw new Error(error);
@@ -149,7 +151,7 @@ ecsService.prototype = Object.create({
         }
       }
     }
-
+    this.logger.info('Matched services: ', this.serviceArns);
     if (Object.keys(this.serviceArns).length <= 0) {
       throw new Error("No matches found for service name!");
     }
@@ -157,32 +159,32 @@ ecsService.prototype = Object.create({
 
   describeServices: function() {
 
+    this.logger.info('Fetching service descriptions from ECS');
     var serviceArns = Object.keys(this.serviceArns);
 
     if (serviceArns.length <= 0) {
       throw new Error('No serviceArns set, run listServices or setServiceArns');
     }
 
-    logger.debug('describeServices this.serviceArns');
-    logger.debug(this.serviceArns);
+    this.logger.debug('describeServices this.serviceArns');
+    this.logger.debug(this.serviceArns);
 
-    var _this = this;
     var promises = [];
-    for (clusterArn in this.serviceArns) {
+    for (var clusterArn in this.serviceArns) {
       var params = {
         services: this.serviceArns[clusterArn],
         cluster: clusterArn
       };
 
-      logger.debug('describeServices request parameters', params);
+      this.logger.debug('describeServices request parameters', params);
 
-      var promise = new Promise(function (resolve) {
-        _this.ecs.describeServices(params, function (err, data) {
+      var promise = new Promise((resolve) => {
+        this.ecs.describeServices(params, (err, data) => {
           if (err) {
             throw new Error(err);
           }
 
-          logger.debug('describeServices callback response for cluster: ' + clusterArn, util.inspect(data, { showHidden: true, depth: null }));
+          this.logger.debug('describeServices callback response for cluster: ' + clusterArn, util.inspect(data, { showHidden: true, depth: null }));
 
           return resolve(data);
         });
@@ -192,7 +194,7 @@ ecsService.prototype = Object.create({
 
     }
 
-    return Promise.all(promises).then(function (values) {
+    return Promise.all(promises).then((values) => {
 
 
         var data = [];
@@ -221,11 +223,12 @@ ecsService.prototype = Object.create({
       throw new Error("No service descriptions found");
     }
 
-    var _this = this;
     var promises = [];
     var services = this.serviceDescriptions;
 
-    for (serviceArn in services) {
+    for (var serviceArn in services) {
+
+      this.logger.info('Fetching tasks for service: ' + serviceArn);
 
       var service = services[serviceArn];
 
@@ -235,13 +238,13 @@ ecsService.prototype = Object.create({
         maxResults: 100,
       };
 
-      var promise = new Promise(function (resolve) {
-        _this.ecs.listTasks(params, function (err, data) {
+      var promise = new Promise((resolve) => {
+        this.ecs.listTasks(params, (err, data) => {
 
           if (err) {
             throw new Error(err); // an error occurred
           } else {
-            logger.debug('listTasks callback response for service: ' + service.serviceArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
+            this.logger.debug('listTasks callback response for service: ' + service.serviceArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
             //inject the cluster and service
             //in to the response so that
             //we know which task belong to where
@@ -259,7 +262,7 @@ ecsService.prototype = Object.create({
       promises.push(promise);
     }
 
-    return Promise.all(promises).then(function (values) {
+    return Promise.all(promises).then((values) => {
 
       var tasks = [];
       for (var i=0; i<values.length; i++) {
@@ -314,7 +317,6 @@ ecsService.prototype = Object.create({
       throw new Error('No clusters set');
     }
 
-    var _this = this;
     var promises = [];
 
     for (var i=0; i<clusterArns.length; i++) {
@@ -322,21 +324,23 @@ ecsService.prototype = Object.create({
       var clusterArn = clusterArns[i];
       var taskArns = this.clusterArns[clusterArn].tasks;
 
+      this.logger.info('Fetching task descriptions for cluster: ' + clusterArn);
+
       var params = {
         tasks: taskArns,
         cluster: clusterArn
       };
 
-      logger.debug('describeTasks for cluster: ' + clusterArn + ' request parameters', params);
+      this.logger.debug('describeTasks for cluster: ' + clusterArn + ' request parameters', params);
 
-      var promise = new Promise(function (resolve) {
-        _this.ecs.describeTasks(params, function (err, data) {
+      var promise = new Promise((resolve) => {
+        this.ecs.describeTasks(params, (err, data) => {
 
           if (err) {
             throw new Error(err); // an error occurred
           } else {
 
-            logger.debug('describeTasks callback response for cluster: ' + clusterArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
+            this.logger.debug('describeTasks callback response for cluster: ' + clusterArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
             return resolve(data);
           }
         });
@@ -345,7 +349,7 @@ ecsService.prototype = Object.create({
     }
 
     //describe all tasks
-    return Promise.all(promises).then(function (values) {
+    return Promise.all(promises).then((values) => {
 
       var data = [];
       for (var i=0; i<values.length; i++) {
@@ -358,6 +362,7 @@ ecsService.prototype = Object.create({
   processTaskDescriptions: function (data) {
 
 
+    this.logger.info('Extracting task defintions from task descriptions');
     if (data.length <= 0) {
       throw new Error("No task descriptions returned");
     }
@@ -366,9 +371,10 @@ ecsService.prototype = Object.create({
     for (var i=0; i<tasks.length; i++) {
 
       var task = tasks[i];
-      if (task.taskDefinitionArn.indexOf(this.vargs.Faimly) == -1) {
+      var taskDef = task.taskDefinitionArn.toLowerCase();
+      if (taskDef.indexOf(this.vargs.family.toLowerCase()) == -1) {
         //skip this task as it doesn't match
-        logger.debug('Skipping task deifnition as no match to family: '+this.vargs.Family + ' taskdef Arn: ' + task.taskDefinitionArn);
+        this.logger.debug('Skipping task deifnition as no match to family: '+ this.vargs.family + ' taskdef Arn: ' + task.taskDefinitionArn);
         continue;
       }
       if (!(task.taskDefinitionArn in this.taskDefinitionArns)) {
@@ -378,33 +384,38 @@ ecsService.prototype = Object.create({
       task.serviceArn = this.taskArns[task.taskArn].serviceArn;
 
       this.taskDefinitionArns[task.taskDefinitionArn] = task;
+
+      this.logger.info('Matched Task Defintion for service: ' + task.serviceArn, task.taskDefinitionArn);
+
     }
 
     if (Object.keys(this.taskDefinitionArns).length <= 0) {
       throw new Error('No task definitions found');
     }
+
   },
 
   describeTaskDefinitions: function () {
+
+    this.logger.info('Fetching Task Defintion descriptions from ECS');
 
     if (Object.keys(this.taskDefinitionArns).length <= 0) {
       throw new Error('No task definitions set');
     }
 
-    var _this = this;
     var promises = [];
-    for (taskDefArn in this.taskDefinitionArns) {
+    for (var taskDefArn in this.taskDefinitionArns) {
 
       var params = {
         taskDefinition: taskDefArn
       };
 
-      var promise = new Promise(function (resolve) {
-        _this.ecs.describeTaskDefinition(params, function (err, data) {
+      var promise = new Promise((resolve) => {
+        this.ecs.describeTaskDefinition(params, (err, data) => {
           if (err) {
             throw new Error(err); // an error occurred
           } else {
-            logger.debug('describeTaskDefinitionss callback response for task def: ' + taskDefArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
+            this.logger.debug('describeTaskDefinitionss callback response for task def: ' + taskDefArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
             return resolve(data);
           }
         });
@@ -413,7 +424,7 @@ ecsService.prototype = Object.create({
       promises.push(promise);
     }
 
-    return Promise.all(promises).then(function (values) {
+    return Promise.all(promises).then((values) => {
 
       var taskDefs = [];
       for (var i=0; i<values.length; i++) {
@@ -424,7 +435,7 @@ ecsService.prototype = Object.create({
         var taskDef = values[i].taskDefinition;
         if (taskDef.status == 'ACTIVE') {
 
-          var task = _this.taskDefinitionArns[taskDef.taskDefinitionArn];
+          var task = this.taskDefinitionArns[taskDef.taskDefinitionArn];
 
           values[i].serviceArn = task.serviceArn;
           values[i].clusterArn = task.clusterArn;
@@ -440,14 +451,13 @@ ecsService.prototype = Object.create({
 
   registerTaskDefinitions: function (data) {
 
-
+    this.logger.info('Creating new Task Defintions');
     if (data.length <= 0) {
       throw new Error("No ACTIVE task definitions found in selection");
     }
 
     this.taskDefinitions = data;
 
-    var _this = this;
     var promises = [];
 
     for (var i=0; i<this.taskDefinitions.length; i++) {
@@ -464,8 +474,8 @@ ecsService.prototype = Object.create({
       //need to have the container passed in the vargs
       for (var x=0; x<taskDef.containerDefinitions; x++) {
         var name = taskDef.containerDefinitions[x].name;
-        if (name.toLowerCase() == vargs.ContainerName.toLowerCase()) {
-          taskDef.containerDefinitions[x].image = vargs.Image + ":" + vargs.Tag
+        if (name.toLowerCase() == this.vargs.containerName.toLowerCase()) {
+          taskDef.containerDefinitions[x].image = this.vargs.imageName + ":" + this.vargs.imageTag
         }
       }
 
@@ -474,12 +484,13 @@ ecsService.prototype = Object.create({
       /*
       todo
        */
-      if (Object.keys(vargs.TaskDefinition).length > 0) {
-        logger.debug('before', util.inspect(taskDef, { showHidden: true, depth: null }));
+      if (this.vargs.taskDefinition !== null) {
+        if (Object.keys(this.vargs.taskDefinition).length > 0) {
+        this.logger.debug('Defintion before merge', util.inspect(taskDef, { showHidden: true, depth: null }));
 
-        taskDef = this.mergeObjects(taskDef, vargs.TaskDefinition);
+          taskDef = this.mergeObjects(taskDef, this.vargs.taskDefinition);
 
-        logger.debug('after', util.inspect(taskDef, { showHidden: true, depth: null }));
+        }
       }
 
       //remove fields that aren't required for new definition
@@ -488,13 +499,13 @@ ecsService.prototype = Object.create({
       delete taskDef.status;
       delete taskDef.requiresAttributes;
 
-      /*
-      var promise = new Promise(function (resolve) {
-        _this.ecs.registerTaskDefinition(taskDef, function (err, data) {
+      this.logger.info('Attempting to register new Task Defintion', util.inspect(taskDef, { showHidden: true, depth: null }));
+      var promise = new Promise((resolve) => {
+        this.ecs.registerTaskDefinition(taskDef, (err, data) => {
           if (err) {
             throw new Error(err); // an error occurred
           } else {
-            logger.debug('registerTaskDefinitions callback response for service: ' + serviceArn, data);           // successful response
+            this.logger.debug('registerTaskDefinitions callback response for service: ' + serviceArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
             //need to furnish the results with the taskArn
 
             data = {
@@ -508,11 +519,10 @@ ecsService.prototype = Object.create({
           }
         });
       });
-*/
-      //promises.push(promise);
+      promises.push(promise);
     }
-    return;
-    return Promise.all(promises).then(function (values) {
+
+    return Promise.all(promises).then((values) => {
 
       var data = [];
       for (var i=0; i<values.length; i++) {
@@ -526,12 +536,11 @@ ecsService.prototype = Object.create({
 
     //update the service of each task def.
     //get the existing task from the values in case we need to stop it
+    this.logger.info('Updating services');
 
     if (taskDefs.length <= 0) {
       throw new Error("no task definitions have been created");
     }
-
-    var _this = this;
 
     var promises = [];
     for (var i=0; i<taskDefs.length; i++) {
@@ -550,14 +559,14 @@ ecsService.prototype = Object.create({
         taskDefinition: taskDef.taskDefinition.taskDefinitionArn
       };
 
-      logger.debug('updateService request parameters', params);
+      this.logger.debug('updateService request parameters', params);
 
-      var promise = new Promise(function (resolve) {
-        _this.ecs.updateService(params, function (err, data) {
+      var promise = new Promise((resolve) => {
+        this.ecs.updateService(params, (err, data) => {
          if (err) {
             throw new Error(err); // an error occurred
           } else {
-            logger.debug('updateService callback response for service: ' + taskDef.serviceArn + ' task def: ' + taskDefArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
+            this.logger.debug('updateService callback response for service: ' + taskDef.serviceArn + ' task def: ' + taskDef.family, util.inspect(data, { showHidden: true, depth: null }));           // successful response
             return resolve(data);
           }
         });
@@ -565,10 +574,10 @@ ecsService.prototype = Object.create({
       promises.push(promise);
     }
 
-    return Promise.all(promises).then(function (values) {
+    return Promise.all(promises).then((values) => {
 
       for (var i=0; i<values.length; i++) {
-        logger.info(values[i].service.serviceName + "updated");
+        this.logger.info('Service: ' + values[i].service.serviceName + " updated");
       }
       return values;
     });
@@ -623,7 +632,7 @@ ecsService.prototype = Object.create({
               }
 
               if (typeof oldObj[param] == 'object' || (util.isArray(oldObj[param]) && oldObj[param].length > 0)) {
-                
+
                 oldObj[param] = this.mergeObjects(oldObj[param],newObj[param]);
 
                 continue;
@@ -653,7 +662,7 @@ ecsService.prototype = Object.create({
           target = source;
           return target;
         }
-        
+
         //its an array of objects so process the objects in the array
         if(typeof source[0] == 'object' && !util.isArray(source[0])) {
 
@@ -665,22 +674,22 @@ ecsService.prototype = Object.create({
         //iterate over the array and set values as needed
         //need to think about how to delete item from the array
         for (var i=0; i < source.length; i++) {
-          
+
           var value = source[i];
-          
+
           if (target.indexOf(value) == -1)  {
              target.push(value);
           }
         }
-        return target;      
-    } 
+        return target;
+    }
 
     if (typeof source == 'object') {
 
       for (var param in source) {
 
         if (!(param in target)) {
-          logger.warn(param + 'param not found in target');
+          this.logger.warn(param + 'param not found in target');
           continue;
         }
 
@@ -701,7 +710,20 @@ ecsService.prototype = Object.create({
 module.exports = ecsService;
 
 
-function processBuild(params) {
+plugin.parse().then(function (params) {
+
+  params = humps.camelizeKeys(params);
+
+  console.log(params);
+  // gets build and repository information for
+  // the current running build
+  const workspace = params.workspace;
+  const build = params.build;
+  const repo  = params.repo;
+
+  // gets plugin-specific parameters defined in
+  // the .drone.yml file
+  const vargs = params.vargs;
 
 
   var logLevels = [
@@ -715,79 +737,85 @@ function processBuild(params) {
 
   var logLevel = 'info';
 
-  if (logLevels.indexOf(vargs.LogLevel) != -1) {
-    logLevel = vargs.LogLevel;
+  if (logLevels.indexOf(vargs.logLevel) != -1) {
+    logLevel = vargs.logLevel;
   }
 
+
+  const logger = bunyan.createLogger({name: 'drone-ecs-node'});
+
+
   logger.level(logLevel);
-  // gets build and repository information for
-  // the current running build
-  const build = params.build;
-  const repo  = params.repo;
 
-  // gets plugin-specific parameters defined in
-  // the .drone.yml file
-  const vargs = params.vargs;
+  logger.info('Validating Paramters');
 
-  if (vargs.AccessKey.length == 0) {
+  if (vargs.accessKey.length == 0) {
     logger.error("Please provide an access key");
 
     return process.exit(1);
   }
 
-  if (vargs.SecretKey.length == 0) {
+  if (vargs.secretKey.length == 0) {
     logger.error("Please provide a secret key");
 
     return process.exit(1);
   }
 
-  if (vargs.Region.length == 0) {
+  if (vargs.region.length == 0) {
     logger.error("Please provide a region");
 
     return process.exit(1);
   }
 
-  if (vargs.Family.length == 0) {
+  if (vargs.family.length == 0) {
     logger.error("Please provide a task definition family name");
 
     return process.exit(1);
   }
 
-  if (vargs.Cluster.length == 0) {
+  if (vargs.cluster.length == 0) {
     logger.error("Please provide a cluster name");
 
     return process.exit(1);
   }
 
-  if (vargs.Image.length == 0) {
+  if (vargs.imageName.length == 0) {
     logger.error("Please provide an image name");
 
     return process.exit(1);
   }
 
-  if (vargs.Service.length == 0) {
+  if (vargs.service.length == 0) {
     logger.error("Please provide a service name");
 
     return process.exit(1);
   }
 
+  if (vargs.taskDefinition === '' || vargs.taskDefinition === false || vargs.taskDefinition === null) {
 
+    vargs.taskDefinition == null;
 
-  if (vargs.Tag.length == 0) {
+  } else {
+    vargs.taskDefinition = jsonfile.readFileSync(workspace.path + '/' + vargs.taskDefinition);
+  }
+
+  if (vargs.imageTag.length == 0) {
     vargs.Tag = "latest";
   }
 
 
-  var awsOptions = {
-    accessKeyId:      vargs.AccessKey,
-    secretAccessKey:  vargs.SecretKey,
-    region:           vargs.Region,
-  }
 
-  var ecs = new ecsService(awsOptions, vargs);
+  var awsOptions = {
+    accessKeyId:      vargs.accessKey,
+    secretAccessKey:  vargs.secretKey,
+    region:           vargs.region,
+  };
+
+  console.log(awsOptions);
+
+  var ecs = new ecsService(awsOptions, vargs, logger);
 
   /*
-  if cloudformation = true
   1. list clusters and find the cluster arns
   2. list services in clusters and find the service arns
   3. describe the services and find the task def arns
@@ -798,71 +826,66 @@ function processBuild(params) {
   8. if they do then updateservice
   */
 
-  if (vargs.CloudFormation) {
+  return ecs.listClusters()
+  .then(function (data) {
 
-    return ecs.listClusters()
-    .then(function (clusterArns) {
+    logger.debug('list clusters', util.inspect(data, { showHidden: true, depth: null }));
+    ecs.processClusters(data);
+    return ecs.listServices();
+  })
+  .then(function (data) {
 
-      ecs.processClusters(clusterArns);
-      return ecs.listServices();
-    })
-    .then(function (serviceArns) {
+    logger.debug('list services', util.inspect(data, { showHidden: true, depth: null }));
+    ecs.processServicesList(data);
+    return ecs.describeServices();
+  })
+  .then(function (data) {
 
-      ecs.processServicesList(serviceArns);
-      return ecs.describeServices();
-    })
-    .then(function (serviceDescriptions) {
+    logger.debug('describe services', util.inspect(data, { showHidden: true, depth: null }));
+    ecs.processServiceDescriptions(data);
+    return ecs.listTasks();
+  })
+  .then(function (data) {
 
-      ecs.processServiceDescriptions(serviceDescriptions);
-      return ecs.listTasks();
-    })
-    .then(function (taskArns) {
+    logger.debug('list tasks', util.inspect(data, { showHidden: true, depth: null }));
+    ecs.processTasksList(data);
+    return ecs.describeTasks();
+  })
+  .then(function (data) {
 
-      ecs.processTasksList(taskArns);
-      return ecs.describeTasks();
-    })
-    .then(function (taskDescriptions) {
+    logger.debug('describe tasks', util.inspect(data, { showHidden: true, depth: null }));
+    ecs.processTaskDescriptions(data);
+    return ecs.describeTaskDefinitions();
+  })
+  .then(function (data) {
 
-      ecs.processTaskDescriptions(taskDescriptions);
-      return ecs.describeTaskDefinitions();
-    })
-    .then(function (taskDefinitions) {
+    logger.debug('describe task definitions', util.inspect(data, { showHidden: true, depth: null }));
+    return ecs.registerTaskDefinitions(data);
+  })
+  .then(function (data) {
 
-      return ecs.registerTaskDefinitions(taskDefinitions);
-    })
-    .then(function (taskDefinitions) {
+    logger.info('Register Task Defintions Success:', util.inspect(data, { showHidden: true, depth: null }));
+    return ecs.updateServices(data);
+  })
+  .then(function (data) {
 
-      return ecs.updateServices(taskDefinitions);
-    })
-    .then(function (services) {
+    logger.info('Update Service Success:', util.inspect(data, { showHidden: true, depth: null }));
+    logger.info('everything worked');
+    return process.exit(0);
 
-      logger.info('final data', services);
-      logger.info('everything worked');
-      return process.exit(0);
+  })
+  .catch(function (err) {
 
-    })
-    .catch(function (err) {
+    logger.fatal('ECS Error', err, err.stack);
+    return process.exit(1);
+  });
+})
+.catch(function (err) {
 
-      logger.fatal('catch', err, err.stack);
-      return process.exit(1);
-    });
-  } else {
-    //process the normal setup.
-    //should still retreive the existing config
-    //and merge it here, but no need for searching the
-    //all clusters etc. Can retrieve task defs using family name
-    /*
-    what's actually happening here?
-    all the specified names are hard
-    so should be able to just do the last 2 steps
-    of regdefinitions and update service.
-    might need a way to set the services / clusters / tasks
-    also need to pull down the existing definition so we can merge the
-    new config
-     */
+  console.log('Dron Plugin Error', err, err.stack);
+  return process.exit(1);
+});
 
-  }
-}
 
 /*
 function  mergeRecursive(obj1, obj2) {
@@ -909,7 +932,7 @@ function mergeArrays (arr1, arr2) {
   }
 */
 //testing
-
+/*
 var taskDef = {
 
          containerDefinitions:
@@ -917,9 +940,9 @@ var taskDef = {
               name: 'dashboard',
               portMappings:
             [ { containerPort: 80, hostPort: 8070, protocol: 'udp' , keys:['containerPort', 'hostPort']}],
-               environment: [ 
+               environment: [
                   { name: 'TEST', value: '1234'},
-                  { name: 'NODE_ENV', value: 'test', keys: ['name'] , remove:true}
+                  { name: 'NODE_ENV', value: 'test', keys: ['name']}
               ],
               links: ['a'],
               keys: ['name']
@@ -967,7 +990,7 @@ var a = {           environment:
           };
 
 var b = {
-                environment: [ 
+                environment: [
                   { name: 'TEST', value: '1234'},
                   { name: 'NODE_ENV', value: 'test', keys: ['name'] }
               ]
@@ -992,6 +1015,14 @@ var vargs = {
   LogLevel: 'debug',
   TaskDefinition: taskDef
 }
+
+//console.log('args', process.argv);
+
+params = JSON.parse(process.argv[3]);
+
+vargs = params.vargs;
+console.log(vargs.TaskDefinition);
+vargs.TaskDefinition = null;//jsonfile.readFileSync('/data/dev/golang/src/github.com/fridaystreet/drone-ecs-node/'+vargs.TaskDefinition);
 
 var logLevels = [
   'info',
@@ -1056,24 +1087,19 @@ var ecs = new ecsService(awsOptions, vargs);
     })
     .then(function (data) {
 
-      logger.debug('final', util.inspect(data, { showHidden: true, depth: null }));
-    })
-/*
-    .then(function (data) {
-
+      logger.info('Register Task Defintions Success:', util.inspect(data, { showHidden: true, depth: null }));
       return ecs.updateServices(data);
     })
     .then(function (data) {
 
-      logger.info('final data', data);
+      logger.info('Update Service Success:', util.inspect(data, { showHidden: true, depth: null }));
       logger.info('everything worked');
       return process.exit(0);
 
     })
-*/    
     .catch(function (err) {
 
       logger.error('catch', err, err.stack);
       return process.exit(1);
     });
-
+*/

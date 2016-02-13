@@ -1,0 +1,15 @@
+{
+  "containerDefinitions":
+  [ {
+      "name": "dashboard",
+      "portMappings":
+    [ { "containerPort": 80, "hostPort": 8070, "protocol": "udp" , "keys":["containerPort", "hostPort"]}],
+       "environment": [
+          { "name": "TEST", "value": "1234"},
+          { "name": "NODE_ENV", "value": "test", "keys": ["name"]}
+      ],
+      "links": ["a"],
+      "keys": ["name"]
+    }
+  ]
+}
