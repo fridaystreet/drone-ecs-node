@@ -1,0 +1,40 @@
+# Docker image for the Drone ECS node plugin
+#
+#     cd drone-ecs-node
+#     make deps build docker
+
+FROM alpine:3.3
+
+#ENV VERSION=v0.10.42 CFLAGS="-D__USE_MISC" NPM_VERSION=2
+# ENV VERSION=v0.12.10 NPM_VERSION=2
+# ENV VERSION=v4.3.0 NPM_VERSION=2
+ENV VERSION=v5.6.0 NPM_VERSION=3
+
+# For base builds
+# ENV CONFIG_FLAGS="--without-npm" RM_DIRS=/usr/include
+ENV CONFIG_FLAGS="--fully-static --without-snapshot" DEL_PKGS="libgcc libstdc++" RM_DIRS=/usr/include
+
+RUN apk add --no-cache curl make gcc g++ binutils-gold python linux-headers paxctl libgcc libstdc++
+RUN mkdir /usr/src
+WORKDIR /usr/src
+RUN curl -SL -o node-v5.6.0.tar.gz http://nodejs.org/dist/latest-v5.x/node-v5.6.0.tar.gz
+RUN tar -xzf node-${VERSION}.tar.gz
+WORKDIR node-${VERSION}
+RUN ls
+RUN ./configure --prefix=/usr ${CONFIG_FLAGS}
+RUN make -j$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1)
+RUN make install
+RUN paxctl -cm /usr/bin/node
+WORKDIR cd /
+#RUN npm install -g npm@${NPM_VERSION}
+RUN find /usr/lib/node_modules/npm -name test -o -name .bin -type d | xargs rm -rf
+RUN apk del curl make gcc g++ binutils-gold python linux-headers paxctl ${DEL_PKGS}
+RUN rm -rf /etc/ssl /usr/src ${RM_DIRS} \
+    /usr/share/man /tmp/* /var/cache/apk/* /root/.npm /root/.node-gyp \
+    /usr/lib/node_modules/npm/man /usr/lib/node_modules/npm/doc /usr/lib/node_modules/npm/html
+
+#RUN mkdir /drone-ecs-node
+#ADD package.json /drone-ecs-node/package.json
+#RUN CD /drone-ecs-node
+#RUN npm install
+#ENTRYPOINT ["node /plugin/app.js"]

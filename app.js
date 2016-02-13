@@ -857,6 +857,7 @@ plugin.parse().then(function (params) {
     ecs.processTaskDescriptions(data);
     return ecs.describeTaskDefinitions();
   })
+  /*
   .then(function (data) {
 
     logger.debug('describe task definitions', util.inspect(data, { showHidden: true, depth: null }));
@@ -867,6 +868,7 @@ plugin.parse().then(function (params) {
     logger.info('Register Task Defintions Success:', util.inspect(data, { showHidden: true, depth: null }));
     return ecs.updateServices(data);
   })
+*/
   .then(function (data) {
 
     logger.info('Update Service Success:', util.inspect(data, { showHidden: true, depth: null }));
