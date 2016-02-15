@@ -1,8 +1,7 @@
 # drone-ecs-node
 
 [![Build Status](http://beta.drone.io/api/badges/drone-plugins/drone-ecs/status.svg)](http://beta.drone.io/drone-plugins/drone-ecs)
-[![Coverage Status](https://aircover.co/badges/drone-plugins/drone-ecs/coverage.svg)](https://aircover.co/drone-plugins/drone-ecs)
-[![](https://badge.imagelayers.io/plugins/drone-ecs:latest.svg)](https://imagelayers.io/?images=plugins/drone-ecs:latest 'Get your own badge on imagelayers.io')
+[![](https://badge.imagelayers.io/fridaystreet/drone-ecs-node:latest.svg)](https://imagelayers.io/?images=fridaystreet/drone-ecs-node:latest 'Get your own badge on imagelayers.io')
 
 Drone plugin to deploy or update a project on AWS ECS. This has been model on the original drone-ecs plugin written in go, thanks to the drone team for their efforts and open sourcing their sofwtare.
 
