@@ -17,7 +17,7 @@ This plugin hasn't been extensively tested. We do have a fairly complex ecs envi
 
 If you find it useful and want to contribute, pull requests are more than welcome. I'll do my best to address any issues as quickly as possible, but please bear in mind, we built this to address a pressing need in our business. Our core business project is our current focus, so for larger issues or feature requests, unless they are impacting us or of value to our project regrettably at the present time I can't give them much priority.
 
-
+See DOCS.md for full instructions
 
 ##Development
 
