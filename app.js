@@ -7,7 +7,7 @@ const Promise = require('bluebird');
 const bunyan = require('bunyan');
 const util = require('util');
 const jsonfile = require('jsonfile');
-const humps = require('./humps');
+const humps = require('humps');
 
 function ecsService (awsOptions, vargs, logger) {
 
@@ -709,12 +709,12 @@ ecsService.prototype = Object.create({
 
 module.exports = ecsService;
 
+    console.log(process.argv);
 
 plugin.parse().then(function (params) {
 
   params = humps.camelizeKeys(params);
 
-  console.log(params);
   // gets build and repository information for
   // the current running build
   const workspace = params.workspace;
@@ -748,11 +748,15 @@ plugin.parse().then(function (params) {
 
   logger.level(logLevel);
 
-  if (vargs.dryRun) {
+  if (!('disableDryRun' in vargs)) {
+    vargs.disableDryRun = false;
+  }
+
+  if (vargs.disableDryRun === false) {
     logger.info('Running in Dry Run mode, no changes will be sent to ECS');
   }
 
-  logger.info('Validating Paramters');
+  logger.info('Validating Parameters');
 
   if (vargs.accessKey.length == 0) {
     logger.error("Please provide an access key");
@@ -816,7 +820,6 @@ plugin.parse().then(function (params) {
     region:           vargs.region,
   };
 
-  console.log(awsOptions);
 
   var ecs = new ecsService(awsOptions, vargs, logger);
 
@@ -865,10 +868,12 @@ plugin.parse().then(function (params) {
   .then(function (data) {
 
     logger.debug('describe task definitions', util.inspect(data, { showHidden: true, depth: null }));
-    if (vargs.dryRun) {
+    if (!vargs.disableDryRun) {
       logger.info('Exiting dry run before writing any changes to ECS');
       return process.exit(1);
     }
+    
+    logger.warn('Caution! Dry run mode is disabled, changes will be written to ECS');
     return ecs.registerTaskDefinitions(data);
   })
   .then(function (data) {

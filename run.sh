@@ -4,4 +4,6 @@ SEP=$1
 BUILD=$2
 
 cd /drone-ecs-node
-node app.js $SEP $BUILD | bunyan
+set -o pipefail
+node app.js $SEP $BUILD 
+#| bunyan

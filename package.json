@@ -17,6 +17,7 @@
     "bluebird": "^3.2.2",
     "bunyan": "^1.5.1",
     "drone-node": "^1.0.1",
+    "humps": "^1.0.0",
     "jsonfile": "^2.2.3"
   },
   "devDependencies": {},
