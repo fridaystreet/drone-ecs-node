@@ -21,6 +21,11 @@ deploy:
     allow_multiple_services: false                                      //update multiple services on a clusters if matched
     log_level: 'debug'                                                            //logging level to output
     task_definition: myTaskDefFile.json                            //relevant path to JSON format taskDefinition file
+    desired_count: 2,                                                         //override desired count of current service  
+    deployment_configuration:                                           //setup min and max percent. These will override
+      maximum_percent: 100,                                            //the existing config. Optional, but must supply either both 
+      minimum_healthy_percent: 50                                   //or neither
+    disable_dry_run:false                                                  //protection setting to allow testing. default mode is dry run mode enabled
 ```
 ### Settings explained
 
@@ -283,8 +288,23 @@ It pulls the portMappings array from the original ECS config and looks through t
 
 This process is then repeated for environments. and all other parameters recursively that are specified in the new json defintion file.
 
+####desired_count (optional)
+Will override the current desired count setting
 
+If you want to leave the current setting in place leave this parameter out of the configuration
 
+####deployment_configuration  (optional)
+Override the current deployment options definied in the service
+
+You must supply both values if you want to override, these settings aren't merged like the task definition.
+
+If you want to leave the current setting in place leave this parameter out of the configuration
+
+####disable_dry_run (optional)
+This is a protection mechanism to help avoid accidentally writing changes to ECS while testing your deployment settings. It is set to false by default, so if you don't specify it, the plugin will always run in dry run mode. 
+When running with log level 'info', it will display the definitions and service configuration updates that would be sent to ECS in live mode. This provides a way to ensure your defintion config changes/additions/deletions are being merged with the existing config correctly before allowing it to be published to ES.
+
+In order to run in live mode you need to explicity add this to your config and set it to true.
 
 ####log_level  (optional)
 Bunyan has been implemented as the logging library.  I haven't done much logging in the plugin.  defaults to info.
