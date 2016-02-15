@@ -34,7 +34,7 @@ npm install
 node app.js -- '{"repo":{"clone_url":"git://github.com/drone/drone","owner":"drone","name":"drone","full_name":"drone/drone"},"system":{"link_url":"https://beta.drone.io"},"build":{"number":22,"status":"success","started_at":1421029603,"finished_at":1421029813,"message":"UpdatetheReadme","author":"johnsmith","author_email":"john.smith@gmail.com","event":"push","branch":"master","commit":"436b7a6e2abaddfd35740527353e78a227ddcb2c","ref":"refs/heads/master"},"workspace":{"root":"/drone/src","path":"/drone/src/github.com/drone/drone"},"vargs":{"build":"","repo":"","access_key":"AKIAJHGS675KHKHNA","secret_key":"JHGDjhgsd78678hjgdjgTYRT6467582kjhDkhmF","region":"ap-southeast-2","family":"CoreProduction-DashboardTaskDefinition","cluster":"CoreProduction-ServicesCluster","service":"CoreProduction-DashboardService","constainer_name":"dashboard","allow_multiple_clusters":false,"allow_multiple_services":false,"image_name":"registry.mydomain.com.au/dashboard-development","image_tag":"1.0.1","log_level":"debug","task_definition":null, "desired_count": 2, "deployment_configuration":{"maximum_percent": 200, "minimum_healthy_percent": 0}, "disable_dry_run":false}}'
 
 Friendly version
-```
+
 {"repo": {"clone_url": "git://github.com/drone/drone","owner": "drone","name": "drone",
         "full_name": "drone/drone"
     },
@@ -82,5 +82,4 @@ Friendly version
       "disable_dry_run":false
     }
 }
-```
 
