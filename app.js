@@ -71,7 +71,7 @@ ecsService.prototype = Object.create({
     }
 
     if (Object.keys(this.clusterArns).length <= 0) {
-      throw new Error("No matches found for cluster name!");
+      throw new Error("Non-case sensitive search returned no matches for cluster name: " + this.vargs.cluster);
     }
   },
 
@@ -153,7 +153,7 @@ ecsService.prototype = Object.create({
     }
     this.logger.info('Matched services: ', this.serviceArns);
     if (Object.keys(this.serviceArns).length <= 0) {
-      throw new Error("No matches found for service name!");
+      throw new Error("Non-case sensitive search returned no matches for service name: " + this.vargs.service);
     }
   },
 
@@ -390,7 +390,7 @@ ecsService.prototype = Object.create({
     }
 
     if (Object.keys(this.taskDefinitionArns).length <= 0) {
-      throw new Error('No task definitions found');
+      throw new Error("Non-case sensitive search returned no matching defintions for family name: " + this.vargs.family);
     }
 
   },
@@ -460,6 +460,12 @@ ecsService.prototype = Object.create({
 
     var promises = [];
 
+    if (this.vargs.disableDryRun) {
+      this.logger.warn('Caution! Dry run mode is disabled, new definitions will be written to ECS');
+    }
+
+    var dryRunData = [];
+
     for (var i=0; i<this.taskDefinitions.length; i++) {
 
       var taskDef = this.taskDefinitions[i].taskDefinition;
@@ -499,37 +505,52 @@ ecsService.prototype = Object.create({
       delete taskDef.status;
       delete taskDef.requiresAttributes;
 
-      this.logger.info('Attempting to register new Task Defintion', util.inspect(taskDef, { showHidden: true, depth: null }));
-      var promise = new Promise((resolve) => {
-        this.ecs.registerTaskDefinition(taskDef, (err, data) => {
-          if (err) {
-            throw new Error(err); // an error occurred
-          } else {
-            this.logger.debug('registerTaskDefinitions callback response for service: ' + serviceArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
-            //need to furnish the results with the taskArn
+      if (this.vargs.disableDryRun) {
+        this.logger.info('Attempting to register new Task Defintion', util.inspect(taskDef, { showHidden: true, depth: null }));
+        var promise = new Promise((resolve) => {
+          this.ecs.registerTaskDefinition(taskDef, (err, data) => {
+            if (err) {
+              throw new Error(err); // an error occurred
+            } else {
+              this.logger.debug('registerTaskDefinitions callback response for service: ' + serviceArn, util.inspect(data, { showHidden: true, depth: null }));           // successful response
+              //need to furnish the results with the taskArn
 
-            data = {
-              taskArn: taskArn,
-              serviceArn: serviceArn,
-              clusterArn: clusterArn,
-              taskDefinition: data.taskDefinition
-            };
+              data = {
+                taskArn: taskArn,
+                serviceArn: serviceArn,
+                clusterArn: clusterArn,
+                taskDefinition: data.taskDefinition
+              };
 
-            return resolve(data);
-          }
+              return resolve(data);
+            }
+          });
         });
-      });
-      promises.push(promise);
+        promises.push(promise);
+      } else {
+        this.logger.info('If you disable dry run mode, the following Task Defintion would be created for service: ' + serviceArn, util.inspect(taskDef, { showHidden: true, depth: null }));
+        dryRunData.push({
+                taskArn: taskArn,
+                serviceArn: serviceArn,
+                clusterArn: clusterArn,
+                taskDefinition: taskDef
+              });
+      }
     }
 
-    return Promise.all(promises).then((values) => {
+    if (this.vargs.disableDryRun) {
+      return Promise.all(promises).then((values) => {
 
-      var data = [];
-      for (var i=0; i<values.length; i++) {
-        data.push(values[i]);
-      }
-      return data;
-    });
+        var data = [];
+        for (var i=0; i<values.length; i++) {
+          data.push(values[i]);
+        }
+        return data;
+      });
+    } else {
+      this.logger.debug('dryrundata', dryRunData);
+      return dryRunData;
+    }
   },
 
   updateServices: function (taskDefs) {
@@ -538,11 +559,16 @@ ecsService.prototype = Object.create({
     //get the existing task from the values in case we need to stop it
     this.logger.info('Updating services');
 
+    if (this.vargs.disableDryRun) {
+      this.logger.warn('Caution! Dry run mode is disabled, service updates will be written to ECS');
+    }
+
     if (taskDefs.length <= 0) {
       throw new Error("no task definitions have been created");
     }
 
     var promises = [];
+
     for (var i=0; i<taskDefs.length; i++) {
 
       var taskDef = taskDefs[i];
@@ -551,36 +577,42 @@ ecsService.prototype = Object.create({
       var params = {
         service: taskDef.serviceArn,
         cluster: taskDef.clusterArn,
-        deploymentConfiguration: {
-          maximumPercent: 200,
-          minimumHealthyPercent: 0
-        },
-        desiredCount: service.desiredCount,
-        taskDefinition: taskDef.taskDefinition.taskDefinitionArn
+        deploymentConfiguration: ('deploymentConfiguration' in this.vargs) ? this.vargs.deploymentConfiguration : { maximumPercent: 200, minimumHealthyPercent: 0 },
+        desiredCount: ('desiredCount' in this.vargs) ? this.vargs.desiredCount : service.desiredCount,
+        taskDefinition: this.vargs.disableDryRun ? taskDef.taskDefinition.taskDefinitionArn : 'Not generated in Dry Run mode'
       };
 
-      this.logger.debug('updateService request parameters', params);
+      this.logger.debug('updateService request parameters', util.inspect(params, { showHidden: true, depth: null }));
 
-      var promise = new Promise((resolve) => {
-        this.ecs.updateService(params, (err, data) => {
-         if (err) {
-            throw new Error(err); // an error occurred
-          } else {
-            this.logger.debug('updateService callback response for service: ' + taskDef.serviceArn + ' task def: ' + taskDef.family, util.inspect(data, { showHidden: true, depth: null }));           // successful response
-            return resolve(data);
-          }
+      if (this.vargs.disableDryRun) {
+        var promise = new Promise((resolve) => {
+          this.ecs.updateService(params, (err, data) => {
+           if (err) {
+              throw new Error(err); // an error occurred
+            } else {
+              this.logger.debug('updateService callback response for service: ' + taskDef.serviceArn + ' task def: ' + taskDef.family, util.inspect(data, { showHidden: true, depth: null }));           // successful response
+              return resolve(data);
+            }
+          });
         });
-      });
-      promises.push(promise);
+        promises.push(promise);
+      } else {
+        this.logger.info('If you disable dry run mode, the following updates would be made to service: ' + taskDef.serviceArn, util.inspect(params, { showHidden: true, depth: null }));           // successful response
+        this.logger.info('Request will not be sent in Dry Run mode');
+      }
     }
 
-    return Promise.all(promises).then((values) => {
+    if (this.vargs.disableDryRun) {
+      return Promise.all(promises).then((values) => {
 
-      for (var i=0; i<values.length; i++) {
-        this.logger.info('Service: ' + values[i].service.serviceName + " updated");
-      }
-      return values;
-    });
+        for (var i=0; i<values.length; i++) {
+          this.logger.info('Service: ' + values[i].service.serviceName + " updated");
+        }
+        return values;
+      });
+    } else {
+      return true;
+    }
   },
 
   mergeObjectArray: function (target, source) {
@@ -709,8 +741,6 @@ ecsService.prototype = Object.create({
 
 module.exports = ecsService;
 
-    console.log(process.argv);
-
 plugin.parse().then(function (params) {
 
   params = humps.camelizeKeys(params);
@@ -837,56 +867,57 @@ plugin.parse().then(function (params) {
   return ecs.listClusters()
   .then(function (data) {
 
-    logger.debug('list clusters', util.inspect(data, { showHidden: true, depth: null }));
+    //logger.debug('list clusters', util.inspect(data, { showHidden: true, depth: null }));
     ecs.processClusters(data);
     return ecs.listServices();
   })
   .then(function (data) {
 
-    logger.debug('list services', util.inspect(data, { showHidden: true, depth: null }));
+    //logger.debug('list services', util.inspect(data, { showHidden: true, depth: null }));
     ecs.processServicesList(data);
     return ecs.describeServices();
   })
   .then(function (data) {
 
-    logger.debug('describe services', util.inspect(data, { showHidden: true, depth: null }));
+    //logger.debug('describe services', util.inspect(data, { showHidden: true, depth: null }));
     ecs.processServiceDescriptions(data);
     return ecs.listTasks();
   })
   .then(function (data) {
 
-    logger.debug('list tasks', util.inspect(data, { showHidden: true, depth: null }));
+    //logger.debug('list tasks', util.inspect(data, { showHidden: true, depth: null }));
     ecs.processTasksList(data);
     return ecs.describeTasks();
   })
   .then(function (data) {
 
-    logger.debug('describe tasks', util.inspect(data, { showHidden: true, depth: null }));
+    //logger.debug('describe tasks', util.inspect(data, { showHidden: true, depth: null }));
     ecs.processTaskDescriptions(data);
     return ecs.describeTaskDefinitions();
   })
   .then(function (data) {
 
-    logger.debug('describe task definitions', util.inspect(data, { showHidden: true, depth: null }));
-    if (!vargs.disableDryRun) {
-      logger.info('Exiting dry run before writing any changes to ECS');
-      return process.exit(1);
-    }
-    
-    logger.warn('Caution! Dry run mode is disabled, changes will be written to ECS');
+    //logger.debug('describe task definitions', util.inspect(data, { showHidden: true, depth: null }));
     return ecs.registerTaskDefinitions(data);
   })
   .then(function (data) {
 
-    logger.info('Register Task Defintions Success:', util.inspect(data, { showHidden: true, depth: null }));
+    if (vargs.disableDryRun) {
+      logger.info('Register Task Defintions Success:', util.inspect(data, { showHidden: true, depth: null }));
+    }
     return ecs.updateServices(data);
   })
   .then(function (data) {
 
-    logger.info('Update Service Success:', util.inspect(data, { showHidden: true, depth: null }));
-    logger.info('everything worked');
-    return process.exit(0);
 
+    if (vargs.disableDryRun) {
+      logger.info('Update Service Success:', util.inspect(data, { showHidden: true, depth: null }));
+      logger.info('everything worked');
+      return process.exit(0);
+    }
+
+    logger.info('Exiting dry run mode. None of the defintions or service updates have been written to ECS');
+    return process.exit(1);
   })
   .catch(function (err) {
 
