@@ -480,7 +480,7 @@ ecsService.prototype = Object.create({
       //need to have the container passed in the vargs
       for (var x=0; x<taskDef.containerDefinitions; x++) {
         var name = taskDef.containerDefinitions[x].name;
-        if (name.toLowerCase() == this.vargs.containerName.toLowerCase()) {
+        if (this.vargs.containerName.indexOf(name.toLowerCase()) != -1) {
           taskDef.containerDefinitions[x].image = this.vargs.imageName + ":" + this.vargs.imageTag
         }
       }
@@ -826,6 +826,12 @@ plugin.parse().then(function (params) {
 
   if (vargs.service.length == 0) {
     logger.error("Please provide a service name");
+
+    return process.exit(1);
+  }
+
+  if (vargs.containerNames.length == 0) {
+    logger.error("Please provide a list of container names");
 
     return process.exit(1);
   }
