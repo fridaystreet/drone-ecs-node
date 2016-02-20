@@ -924,7 +924,7 @@ plugin.parse().then(function (params) {
     }
 
     logger.info('Exiting dry run mode. None of the defintions or service updates have been written to ECS');
-    return process.exit(1);
+    return process.exit(0);
   })
   .catch(function (err) {
 
