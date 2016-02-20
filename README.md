@@ -1,8 +1,7 @@
 # drone-ecs-node
 
 [![Build Status](http://beta.drone.io/api/badges/drone-plugins/drone-ecs/status.svg)](http://beta.drone.io/drone-plugins/drone-ecs)
-[![Coverage Status](https://aircover.co/badges/drone-plugins/drone-ecs/coverage.svg)](https://aircover.co/drone-plugins/drone-ecs)
-[![](https://badge.imagelayers.io/plugins/drone-ecs:latest.svg)](https://imagelayers.io/?images=plugins/drone-ecs:latest 'Get your own badge on imagelayers.io')
+[![](https://badge.imagelayers.io/fridaystreet/drone-ecs-node:latest.svg)](https://imagelayers.io/?images=fridaystreet/drone-ecs-node:latest 'Get your own badge on imagelayers.io')
 
 Drone plugin to deploy or update a project on AWS ECS. This has been model on the original drone-ecs plugin written in go, thanks to the drone team for their efforts and open sourcing their sofwtare.
 
@@ -18,7 +17,7 @@ This plugin hasn't been extensively tested. We do have a fairly complex ecs envi
 
 If you find it useful and want to contribute, pull requests are more than welcome. I'll do my best to address any issues as quickly as possible, but please bear in mind, we built this to address a pressing need in our business. Our core business project is our current focus, so for larger issues or feature requests, unless they are impacting us or of value to our project regrettably at the present time I can't give them much priority.
 
-
+See DOCS.md for full instructions
 
 ##Development
 
@@ -35,7 +34,7 @@ npm install
 node app.js -- '{"repo":{"clone_url":"git://github.com/drone/drone","owner":"drone","name":"drone","full_name":"drone/drone"},"system":{"link_url":"https://beta.drone.io"},"build":{"number":22,"status":"success","started_at":1421029603,"finished_at":1421029813,"message":"UpdatetheReadme","author":"johnsmith","author_email":"john.smith@gmail.com","event":"push","branch":"master","commit":"436b7a6e2abaddfd35740527353e78a227ddcb2c","ref":"refs/heads/master"},"workspace":{"root":"/drone/src","path":"/drone/src/github.com/drone/drone"},"vargs":{"build":"","repo":"","access_key":"AKIAGDHD65JEJZU6NA","secret_key":"JHGDjhgsd78678hjgdjgTYRT6467582kjhDkhmF","region":"ap-southeast-2","family":"CoreProduction-DashboardTaskDefinition","cluster":"CoreProduction-ServicesCluster","service":"CoreProduction-DashboardService","constainer_names":["dashboard"],"allow_multiple_clusters":false,"allow_multiple_services":false,"image_name":"registry.mydomain.com.au/dashboard-development","image_tag":"1.0.1","log_level":"debug","task_definition":null, "desired_count": 2, "deployment_configuration":{"maximum_percent": 200, "minimum_healthy_percent": 0}, "disable_dry_run":false}}'
 
 Friendly version
-```
+
 {"repo": {"clone_url": "git://github.com/drone/drone","owner": "drone","name": "drone",
         "full_name": "drone/drone"
     },
@@ -83,5 +82,4 @@ Friendly version
       "disable_dry_run":false
     }
 }
-```
 
