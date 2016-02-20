@@ -478,9 +478,10 @@ ecsService.prototype = Object.create({
       //need to handle multiple containers
       //which ones updated.
       //need to have the container passed in the vargs
-      for (var x=0; x<taskDef.containerDefinitions; x++) {
+      for (var x=0; x<taskDef.containerDefinitions.length; x++) {
         var name = taskDef.containerDefinitions[x].name;
-        if (this.vargs.containerName.indexOf(name.toLowerCase()) != -1) {
+        if (this.vargs.containerNames.indexOf(name.toLowerCase()) != -1) {
+          this.logger.info('Updating image for container: ' + name + ' in task definition: ' + taskDef.taskDefinitionArn);
           taskDef.containerDefinitions[x].image = this.vargs.imageName + ":" + this.vargs.imageTag
         }
       }

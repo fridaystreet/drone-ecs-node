@@ -16,7 +16,8 @@ deploy:
     cluster: Production-DashboardCluster                         //base cluster name / wildcard
     family: Production-DashboardTaskDefinition             //base family name / wildcard
     service: Production-DashboardService                       //base service name / wildcard
-    constainer_name: dashboard                                        //the name of the container in the definition that uses this image
+    container_names:
+      - dashboard                                        //array of conatiner names for each definition
     allow_multiple_clusters: false                                        //update services on multiple clusters if matched
     allow_multiple_services: false                                      //update multiple services on a clusters if matched
     log_level: 'debug'                                                            //logging level to output
@@ -61,10 +62,10 @@ Again a good example is if you have a environment where instead of using differe
 ####family
 The family parameter operates as a wildcard as well, but it is used to match to task definitions. When the plugin matches a cluster and service, it retrieves all the current tasks within that service. From these tasks it derives the currently active task definitions. These are matched / filtered by this setting to determine which task definitions to update.
 
-####constainer_name
-The container name is required in order to determine which conatiner within the task definition to update the image name for this build. This setting is intended to accomodate definitions with multiple containers.
+####container_names
+A list of container names is required in order to determine which containers within the task definition to update the with the new image name for this build. This setting is intended to accomodate definitions with multiple containers.
 
-Note - It is a non-case sensitive exact match on the name. It does not support wildcards.
+Note - It is a non-case sensitive exact match on each name in the array. It does not support wildcards.
 
 ####allow_multiple_clusters  (optional)
 This defaults to false as a safety precuation. If set to true it will allow matched definitions in multiple clusters to be updated at once.
